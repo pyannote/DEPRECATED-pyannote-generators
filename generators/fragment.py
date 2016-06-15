@@ -45,21 +45,20 @@ class SlidingSegments(object):
             segments = source
 
         elif isinstance(source, Segment):
-            if not self.duration > 0:
-                raise ValueError('Source duration must be strictly positive.')
-            if not source.duration > self.duration:
-                raise ValueError('Segment is too short.')
             segments = [source]
 
         elif isinstance(source, (int, float)):
             if not self.duration > 0:
-                raise ValueError('Source must be strictly positive.')
-            if not source > self.duration:
-                raise ValueError('Segment is too short.')
+                raise ValueError('Duration must be strictly positive.')
             segments = [Segment(0, duration)]
 
         else:
             raise TypeError('source must be float, Segment, Timeline or Annotation')
+
+        segments = [segment for segment in segments
+                            if segment.duration > self.duration]
+        if not segments:
+            raise ValueError('Source must contain at least one segment longer than requested duration.')
 
         for segment in segments:
             window = SlidingWindow(duration=self.duration,
@@ -67,10 +66,9 @@ class SlidingSegments(object):
                                    start=segment.start,
                                    end=segment.end)
             for s in window:
-                s = s & segment
-                if s.duration < self.duration:
-                    continue
-                yield s
+                # this is needed because window may go beyond segment.end
+                if s in segment:
+                    yield s
 
 
 class RandomSegments(object):
@@ -109,21 +107,20 @@ class RandomSegments(object):
             segments = source
 
         elif isinstance(source, Segment):
-            if not self.duration > 0:
-                raise ValueError('Duration must be strictly positive.')
-            if not source.duration > self.duration:
-                raise ValueError('Segment is too short.')
             segments = [source]
 
         elif isinstance(source, (int, float)):
             if not self.duration > 0:
                 raise ValueError('Duration must be strictly positive.')
-            if not source > self.duration:
-                raise ValueError('Segment is too short.')
             segments = [Segment(0, duration)]
 
         else:
             raise TypeError('source must be float, Segment, Timeline or Annotation')
+
+        segments = [segment for segment in segments
+                            if segment.duration > self.duration]
+        if not segments:
+            raise ValueError('Source must contain at least one segment longer than requested duration.')
 
         n_segments = len(segments)
         while True:
@@ -246,15 +243,24 @@ class RandomSegmentTriplets(object):
         """
 
         t = RandomTrackTriplets(per_label=self.per_label)
-        triplets = t.iter_triplets(from_annotation, yield_label=yield_label)
+
+        annotation = Annotation(uri=from_annotation.uri,
+                                modality=from_annotation.modality)
+        for segment, track, label in from_annotation.itertracks(label=True):
+            if segment.duration < self.duration:
+                continue
+            annotation[segment, track] = label
+
+        if len(annotation.labels()) < 2:
+            raise ValueError('Annotation must contain at least two labels with segments longer than requested duration.')
+
+        triplets = t.iter_triplets(annotation, yield_label=yield_label)
 
         for triplet in triplets:
 
             a, p, n = [item[0] for item in triplet]
 
             if self.duration:
-                if any(s.duration < self.duration for s in [a, p, n]):
-                    continue
                 a, p, n = [self.pick(s) for s in (a, p, n)]
 
             if yield_label:
