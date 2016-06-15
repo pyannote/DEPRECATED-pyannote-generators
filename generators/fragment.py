@@ -51,7 +51,7 @@ class SlidingSegments(object):
                 raise ValueError('Segment is too short.')
             segments = [source]
 
-        elif isinstance(where, (int, float)):
+        elif isinstance(source, (int, float)):
             if not self.duration > 0:
                 raise ValueError('Source must be strictly positive.')
             if not source > self.duration:
@@ -67,6 +67,7 @@ class SlidingSegments(object):
                                    start=segment.start,
                                    end=segment.end)
             for s in window:
+                s = s & segment
                 if s.duration < self.duration:
                     continue
                 yield s
@@ -87,7 +88,7 @@ class RandomSegments(object):
 
     def pick(self, segment):
         """Pick a subsegment at random"""
-        t = random.random() * (segment.duration - self.duration)
+        t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
     def iter_segments(self, source):
@@ -114,7 +115,7 @@ class RandomSegments(object):
                 raise ValueError('Segment is too short.')
             segments = [source]
 
-        elif isinstance(where, (int, float)):
+        elif isinstance(source, (int, float)):
             if not self.duration > 0:
                 raise ValueError('Duration must be strictly positive.')
             if not source > self.duration:
@@ -126,7 +127,7 @@ class RandomSegments(object):
 
         n_segments = len(segments)
         while True:
-            index = random.randrange(n_segments):
+            index = random.randrange(n_segments)
             segment = segments[index]
             if self.duration:
                 if segment.duration < self.duration:
@@ -158,7 +159,7 @@ class RandomTracks(object):
         while True:
             index = random.randrange(n_segments)
             segment = segments[index]
-            track = random.choice(from_annotation.get_tracks(segment))
+            track = random.choice(list(from_annotation.get_tracks(segment)))
             if yield_label:
                 label = from_annotation[segment, track]
                 yield segment, track, label
@@ -192,7 +193,7 @@ class RandomTrackTriplets(object):
             Defaults to yielding triplets of (segment, track) tuples.
             Useful for logging which labels are more difficult to discriminate.
         """
-        for label in self.labels(from_annotation):
+        for label in from_annotation.labels():
 
             p = RandomTracks()
             positives = p.iter_tracks(from_annotation.subset([label]),
@@ -228,7 +229,7 @@ class RandomSegmentTriplets(object):
 
     def pick(self, segment):
         """Pick a subsegment at random"""
-        t = random.random() * (segment.duration - self.duration)
+        t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
     def iter_triplets(self, from_annotation, yield_label=False):
@@ -254,7 +255,7 @@ class RandomSegmentTriplets(object):
             if self.duration:
                 if any(s.duration < self.duration for s in [a, p, n]):
                     continue
-                a, p, n = [self.pick[s] for s in (a, p, n)]
+                a, p, n = [self.pick(s) for s in (a, p, n)]
 
             if yield_label:
                 a_, p_, n_ = [item[2] for item in triplet]
