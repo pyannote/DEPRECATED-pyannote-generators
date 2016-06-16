@@ -27,6 +27,9 @@ class SlidingSegments(object):
             raise ValueError('Step must be strictly positive.')
         self.step = step
 
+    def signature(self):
+        return {'type': 'segment', 'duration': self.duration}
+
     def iter_segments(self, source):
         """
         Parameters
@@ -84,6 +87,9 @@ class RandomSegments(object):
         super(RandomSegments, self).__init__()
         self.duration = duration
 
+    def signature(self):
+        return {'type': 'segment', 'duration': self.duration}
+
     def pick(self, segment):
         """Pick a subsegment at random"""
         t = segment.start + random.random() * (segment.duration - self.duration)
@@ -135,21 +141,35 @@ class RandomSegments(object):
 
 
 class RandomTracks(object):
-    """(segment, track) tuple generator"""
+    """(segment, track) tuple generator
 
-    def __init__(self):
+    Parameters
+    ----------
+    yield_label: boolean, optional
+        When True, yield (segment, track, label) tuples.
+        Defaults to yielding (segment, track) tuples.
+    """
+
+    def __init__(self, yield_label=False):
         super(RandomTracks, self).__init__()
+        self.yield_label = yield_label
 
-    def iter_tracks(self, from_annotation, yield_label=False):
+    def signature(self):
+        signature = [
+            {'type': 'segment', 'duration': self.duration},
+            {'type': 'track'}
+        ]
+        if self.yield_label:
+            signature.append({'type': 'label'})
+        return signature
+
+    def iter_tracks(self, from_annotation):
         """Yield (segment, track) tuples
 
         Parameters
         ----------
         from_annotation : Annotation
             Annotation from which tracks are obtained.
-        yield_label: boolean, optional
-            When True, yield (segment, track, label) tuples.
-            Defaults to yielding (segment, track) tuples.
         """
         segments = from_annotation.get_timeline()
         n_segments = len(segments)
@@ -157,7 +177,7 @@ class RandomTracks(object):
             index = random.randrange(n_segments)
             segment = segments[index]
             track = random.choice(list(from_annotation.get_tracks(segment)))
-            if yield_label:
+            if self.yield_label:
                 label = from_annotation[segment, track]
                 yield segment, track, label
             else:
@@ -172,38 +192,45 @@ class RandomTrackTriplets(object):
     per_label: int, optional
         Number of consecutive triplets yielded with the same anchor label
         before switching to another label.
+    yield_label: boolean, optional
+        When True, yield triplets of (segment, track, label) tuples.
+        Defaults to yielding triplets of (segment, track) tuples.
+        Useful for logging which labels are more difficult to discriminate.
     """
 
-    def __init__(self, per_label=40):
+    def __init__(self, per_label=40, yield_label=False):
         super(RandomTrackTriplets, self).__init__()
         self.per_label = per_label
+        self.yield_label = yield_label
 
-    def iter_triplets(self, from_annotation, yield_label=False):
+    def signature(self):
+        return [RandomTracks(yield_label=self.yield_label).signature()] * 3
+
+    def iter_triplets(self, from_annotation):
         """Yield (anchor, positive, negative) triplets of tracks
 
         Parameters
         ----------
         from_annotation : Annotation
             Annotation from which triplets are obtained.
-        yield_label: boolean, optional
-            When True, yield triplets of (segment, track, label) tuples.
-            Defaults to yielding triplets of (segment, track) tuples.
-            Useful for logging which labels are more difficult to discriminate.
         """
         for label in from_annotation.labels():
 
-            p = RandomTracks()
-            positives = p.iter_tracks(from_annotation.subset([label]),
-                                      yield_label=yield_label)
+            p = RandomTracks(yield_label=self.yield_label)
+            positives = p.iter_tracks(from_annotation.subset([label]))
 
-            n = RandomTracks()
-            negatives = n.iter_tracks(from_annotation.subset([label], invert=True),
-                                      yield_label=yield_label)
+            n = RandomTracks(yield_label=self.yield_label)
+            negatives = n.iter_tracks(from_annotation.subset([label], invert=True))
 
             anchor = next(positives)
 
             for _ in range(self.per_label):
-                yield anchor, next(positives), next(negatives)
+                try:
+                    positive = next(positives)
+                    negative = next(negatives)
+                except StopIteration as e:
+                    break
+                yield anchor, positive, negative
 
 
 class RandomSegmentTriplets(object):
@@ -217,29 +244,37 @@ class RandomSegmentTriplets(object):
     per_label: int, optional
         Number of consecutive triplets yielded with the same anchor label
         before switching to another label.
+    yield_label: boolean, optional
+        When True, yield triplets of (segment, label) tuples.
+        Default to yielding segment triplets.
+        Useful for logging which labels are more difficult to discriminate.
     """
 
-    def __init__(self, duration=0., per_label=40):
+    def __init__(self, duration=0., per_label=40, yield_label=False):
         super(RandomSegmentTriplets, self).__init__()
         self.duration = duration
         self.per_label = per_label
+        self.yield_label = yield_label
+
+    def signature(self):
+        if self.yield_label:
+            return 3 * [{'type': 'segment', 'duration': self.duration},
+                        {'type': 'label'}]
+        else:
+            return 3 * [{'type': 'segment', 'duration': self.duration}]
 
     def pick(self, segment):
         """Pick a subsegment at random"""
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
-    def iter_triplets(self, from_annotation, yield_label=False):
+    def iter_triplets(self, from_annotation):
         """Yield (anchor, positive, negative) segment triplets
 
         Parameters
         ----------
         from_annotation : Annotation
             Annotation from which triplets are obtained.
-        yield_label: boolean, optional
-            When True, yield triplets of (segment, label) tuples.
-            Default to yielding segment triplets.
-            Useful for logging which labels are more difficult to discriminate.
         """
 
         t = RandomTrackTriplets(per_label=self.per_label)
@@ -254,7 +289,7 @@ class RandomSegmentTriplets(object):
         if len(annotation.labels()) < 2:
             raise ValueError('Annotation must contain at least two labels with segments longer than requested duration.')
 
-        triplets = t.iter_triplets(annotation, yield_label=yield_label)
+        triplets = t.iter_triplets(annotation, yield_label=self.yield_label)
 
         for triplet in triplets:
 
@@ -263,7 +298,7 @@ class RandomSegmentTriplets(object):
             if self.duration:
                 a, p, n = [self.pick(s) for s in (a, p, n)]
 
-            if yield_label:
+            if self.yield_label:
                 a_, p_, n_ = [item[2] for item in triplet]
                 yield (a, a_), (p, p_), (n, n_)
             else:
@@ -284,12 +319,23 @@ class RandomSegmentPairs(object):
     per_label: int, optional
         Number of consecutive relevant and irrelevant pairs yielded with the
         same query label before switching to another label.
+    yield_label: boolean, optional
+        When True, yield triplets of (segment, label) tuples.
+        Default to yielding segment triplets.
+        Useful for logging which labels are more difficult to discriminate.
 
     """
-    def __init__(self, duration=0., per_label=40):
+    def __init__(self, duration=0., per_label=40, yield_label=False):
         super(RandomSegmentPairs, self).__init__()
         self.duration = duration
         self.per_label = per_label
+        self.yield_label = yield_label
+
+    def signature(self):
+        signature = RandomSegmentTriplets(duration=self.duration,
+                                          per_label=self.per_label,
+                                          yield_label=self.yield_label)
+        return [signature, signature, {'type': 'boolean'}]
 
     def iter_pairs(self, from_annotation, yield_label=False):
         """Yield ((query, returned), relevance)
@@ -298,15 +344,12 @@ class RandomSegmentPairs(object):
         ----------
         from_annotation : Annotation
             Annotation from which triplets are obtained.
-        yield_label: boolean, optional
-            When True, yield triplets of (segment, label) tuples.
-            Default to yielding segment triplets.
-            Useful for logging which labels are more difficult to discriminate.
         """
 
         t = RandomSegmentTriplets(duration=self.duration,
-                                  per_label=self.per_label)
-        triplets = t.iter_triplets(from_annotation, yield_label=yield_label)
+                                  per_label=self.per_label,
+                                  yield_label=self.yield_label)
+        triplets = t.iter_triplets(from_annotation)
 
         for query, positive, negative in triplets:
             yield (query, positive), True
