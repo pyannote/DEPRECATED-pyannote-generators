@@ -277,7 +277,8 @@ class RandomSegmentTriplets(object):
             Annotation from which triplets are obtained.
         """
 
-        t = RandomTrackTriplets(per_label=self.per_label)
+        t = RandomTrackTriplets(per_label=self.per_label
+                                yield_label=self.yield_label)
 
         annotation = Annotation(uri=from_annotation.uri,
                                 modality=from_annotation.modality)
@@ -289,7 +290,7 @@ class RandomSegmentTriplets(object):
         if len(annotation.labels()) < 2:
             return
 
-        triplets = t.iter_triplets(annotation, yield_label=self.yield_label)
+        triplets = t.iter_triplets(annotation)
 
         for triplet in triplets:
 
