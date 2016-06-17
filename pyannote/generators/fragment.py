@@ -3,6 +3,7 @@ from pyannote.core import Timeline
 from pyannote.core import Annotation
 from pyannote.core import SlidingWindow
 import random
+import warning
 
 
 class SlidingSegments(object):
@@ -287,7 +288,8 @@ class RandomSegmentTriplets(object):
             annotation[segment, track] = label
 
         if len(annotation.labels()) < 2:
-            raise ValueError('Annotation must contain at least two labels with segments longer than requested duration.')
+            return
+            # warnings.warn('Annotation must contain at least two labels with segments longer than requested duration.')
 
         triplets = t.iter_triplets(annotation, yield_label=self.yield_label)
 
