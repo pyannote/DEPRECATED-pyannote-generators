@@ -277,7 +277,7 @@ class RandomSegmentTriplets(object):
             Annotation from which triplets are obtained.
         """
 
-        t = RandomTrackTriplets(per_label=self.per_label
+        t = RandomTrackTriplets(per_label=self.per_label,
                                 yield_label=self.yield_label)
 
         annotation = Annotation(uri=from_annotation.uri,
