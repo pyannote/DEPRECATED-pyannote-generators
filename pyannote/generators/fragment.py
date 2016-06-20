@@ -30,6 +30,11 @@ class SlidingSegments(object):
     def signature(self):
         return {'type': 'segment', 'duration': self.duration}
 
+    def __call__(self, protocol_item):
+        _, _, reference = protocol_item
+        for segment in self.iter_segments(reference):
+            yield segment
+
     def iter_segments(self, source):
         """
         Parameters
@@ -94,6 +99,11 @@ class RandomSegments(object):
         """Pick a subsegment at random"""
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
+
+    def __call__(self, protocol_item):
+        _, _, reference = protocol_item
+        for segment in self.iter_segments(reference):
+            yield segment
 
     def iter_segments(self, source):
         """
@@ -163,6 +173,11 @@ class RandomTracks(object):
             signature.append({'type': 'label'})
         return signature
 
+    def __call__(self, protocol_item):
+        _, _, reference = protocol_item
+        for track in self.iter_tracks(reference):
+            yield track
+
     def iter_tracks(self, from_annotation):
         """Yield (segment, track) tuples
 
@@ -205,6 +220,11 @@ class RandomTrackTriplets(object):
 
     def signature(self):
         return [RandomTracks(yield_label=self.yield_label).signature()] * 3
+
+    def __call__(self, protocol_item):
+        _, _, reference = protocol_item
+        for triplet in self.iter_triplets(reference):
+            yield triplet
 
     def iter_triplets(self, from_annotation):
         """Yield (anchor, positive, negative) triplets of tracks
@@ -267,6 +287,11 @@ class RandomSegmentTriplets(object):
         """Pick a subsegment at random"""
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
+
+    def __call__(self, protocol_item):
+        _, _, reference = protocol_item
+        for triplet in self.iter_triplets(reference):
+            yield triplet
 
     def iter_triplets(self, from_annotation):
         """Yield (anchor, positive, negative) segment triplets
@@ -338,7 +363,12 @@ class RandomSegmentPairs(object):
                                           yield_label=self.yield_label)
         return [signature, signature, {'type': 'boolean'}]
 
-    def iter_pairs(self, from_annotation, yield_label=False):
+    def __call__(self, protocol_item):
+        _, _, reference = protocol_item
+        for pair in self.iter_pairs(reference):
+            yield pair
+
+    def iter_pairs(self, from_annotation):
         """Yield ((query, returned), relevance)
 
         Parameters
