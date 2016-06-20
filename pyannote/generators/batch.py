@@ -39,6 +39,9 @@ class BaseBatchGenerator(object):
         self.batch_size = batch_size
 
     def preprocess(self, protocol_item):
+        """Returns pre-processed protocol_item
+        (and optionally set internal state)
+        """
         raise NotImplementedError()
 
     def process(self, fragment, signature=None):
@@ -136,9 +139,9 @@ class BaseBatchGenerator(object):
         while True:
             for protocol_item in protocol.train_iter():
 
-                self.preprocess(protocol_item)
+                item = self.preprocess(protocol_item)
 
-                for fragment in self.fragment_generator(protocol_item):
+                for fragment in self.fragment_generator(item):
 
                     self.__batch_add(fragment)
                     batch_size += 1
