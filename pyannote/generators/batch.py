@@ -42,10 +42,13 @@ class BaseBatchGenerator(object):
         """Returns pre-processed protocol_item
         (and optionally set internal state)
         """
-        raise NotImplementedError()
+        return protocol_item
 
     def process(self, fragment, signature=None):
         raise NotImplementedError()
+
+    def postprocess(self, batch, signature=None):
+        return batch
 
     def __batch_new(self, signature=None):
 
@@ -147,6 +150,7 @@ class BaseBatchGenerator(object):
                     batch_size += 1
 
                     if batch_size == self.batch_size:
-                        yield self.__batch_pack()
+                        batch = self.__batch_pack()
+                        yield self.postprocess(batch)
                         self.batch_ = self.__batch_new()
                         batch_size = 0
