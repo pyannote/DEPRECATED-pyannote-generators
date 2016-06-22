@@ -38,13 +38,14 @@ class BaseBatchGenerator(object):
         self.signature_ = self.fragment_generator.signature()
         self.batch_size = batch_size
 
-    def preprocess(self, protocol_item):
+    # identifier is useful for thread-safe protocol_item dependent preprocessing
+    def preprocess(self, protocol_item, identifier=None, **kwargs):
         """Returns pre-processed protocol_item
         (and optionally set internal state)
         """
         return protocol_item
 
-    def process(self, fragment, signature=None):
+    def process(self, fragment, signature=None, identifier=None):
         raise NotImplementedError()
 
     def postprocess(self, batch, signature=None):
@@ -60,8 +61,8 @@ class BaseBatchGenerator(object):
                     for _signature in signature]
 
         elif isinstance(signature, tuple):
-            return (self.__batch_new(signature=_signature)
-                    for _signature in signature)
+            return tuple([self.__batch_new(signature=_signature)
+                    for _signature in signature])
 
         elif isinstance(signature, dict):
 
@@ -76,7 +77,7 @@ class BaseBatchGenerator(object):
 
             raise NotImplementedError('')
 
-    def __batch_add(self, fragment, signature=None, batch=None):
+    def __batch_add(self, fragment, signature=None, batch=None, identifier=None):
 
         if signature is None:
             signature = self.signature_
@@ -86,24 +87,32 @@ class BaseBatchGenerator(object):
 
         if isinstance(signature, (list, tuple)):
             for _fragment, _signature, _batch, in zip(fragment, signature, batch):
-                self.__batch_add(_fragment, signature=_signature, batch=_batch)
+                self.__batch_add(_fragment,
+                                 signature=_signature,
+                                 batch=_batch,
+                                 identifier=identifier)
 
         elif isinstance(signature, dict):
             fragment_type = signature.get('type', None)
 
             if fragment_type == 'segment':
-                processed = self.process(fragment, signature=signature)
+                processed = self.process(fragment,
+                                         signature=signature,
+                                         identifier=identifier)
                 batch.append(processed)
 
             elif fragment_type == 'boolean':
-                processed = self.process(fragment, signature=signature)
+                processed = self.process(fragment,
+                                         signature=signature,
+                                         identifier=identifier)
                 batch.append(processed)
 
             else:
                 for key in signature:
                     self.__batch_add(fragment[key],
                                      signature=signature[key],
-                                     batch=batch[key])
+                                     batch=batch[key],
+                                     identifier=identifier)
 
     def __batch_pack(self, signature=None, batch=None):
 
@@ -114,12 +123,12 @@ class BaseBatchGenerator(object):
             batch = self.batch_
 
         if isinstance(signature, list):
-            return [self.__batch_pack(signature=_signature, batch=_batch)
-                    for _signature, _batch in zip(signature, batch)]
+            return list(self.__batch_pack(signature=_signature, batch=_batch)
+                        for _signature, _batch in zip(signature, batch))
 
         elif isinstance(signature, tuple):
-            return (self.__batch_pack(signature=_signature, batch=_batch)
-                    for _signature, _batch in zip(signature, batch))
+            return tuple(self.__batch_pack(signature=_signature, batch=_batch)
+                          for _signature, _batch in zip(signature, batch))
 
         elif isinstance(signature, dict):
 
@@ -142,11 +151,11 @@ class BaseBatchGenerator(object):
         while True:
             for protocol_item in protocol.train_iter():
 
-                item = self.preprocess(protocol_item)
+                item = self.preprocess(protocol_item, identifier=identifier)
 
                 for fragment in self.fragment_generator(item):
 
-                    self.__batch_add(fragment)
+                    self.__batch_add(fragment, identifier=identifier)
                     batch_size += 1
 
                     if batch_size == self.batch_size:
