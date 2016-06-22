@@ -143,13 +143,15 @@ class BaseBatchGenerator(object):
                         for key in signature.items()}
 
 
-    def __call__(self, protocol):
+    def __call__(self, protocol_iter_func, infinite=False):
 
         batch_size = 0
         self.batch_ = self.__batch_new()
 
-        while True:
-            for protocol_item in protocol.train_iter():
+        first = True
+        while first or infinite:
+            first = False
+            for identifier, protocol_item in enumerate(protocol_iter_func()):
 
                 item = self.preprocess(protocol_item, identifier=identifier)
 
