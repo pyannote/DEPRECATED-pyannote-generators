@@ -387,10 +387,11 @@ class RandomSegmentPairs(object):
         self.yield_label = yield_label
 
     def signature(self):
-        signature = RandomSegmentTriplets(duration=self.duration,
-                                          per_label=self.per_label,
-                                          yield_label=self.yield_label)
-        return [signature, signature, {'type': 'boolean'}]
+        t = RandomSegmentTriplets(duration=self.duration,
+                                  per_label=self.per_label,
+                                  yield_label=self.yield_label)
+        signature = t.signature()
+        return [(signature[0], signature[0]), {'type': 'boolean'}]
 
     def __call__(self, protocol_item):
         _, _, reference = protocol_item
@@ -412,5 +413,5 @@ class RandomSegmentPairs(object):
         triplets = t.iter_triplets(from_annotation)
 
         for query, positive, negative in triplets:
-            yield (query, positive), True
-            yield (query, negative), False
+            yield [(query, positive), True]
+            yield [(query, negative), False]
