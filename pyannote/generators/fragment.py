@@ -271,10 +271,9 @@ class RandomTrackTriplets(object):
             n = RandomTracks(yield_label=self.yield_label)
             negatives = n.iter_tracks(from_annotation.subset([label], invert=True))
 
-            anchor = next(positives)
-
             for _ in range(self.per_label):
                 try:
+                    anchor = next(positives)
                     positive = next(positives)
                     negative = next(negatives)
                 except StopIteration as e:
