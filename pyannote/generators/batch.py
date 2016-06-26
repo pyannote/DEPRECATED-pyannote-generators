@@ -163,7 +163,7 @@ class BaseBatchGenerator(object):
     def from_protocol_item(self, protocol_item):
         def iter_func():
             yield protocol_item
-        for batch in self.__call__(iter_func, infinite=False)
+        for batch in self.__call__(iter_func, infinite=False):
             yield batch
 
     def __call__(self, protocol_iter_func, infinite=False):
