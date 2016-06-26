@@ -183,8 +183,16 @@ class BaseBatchGenerator(object):
                     self.__batch_add(fragment, identifier=identifier)
                     batch_size += 1
 
-                    if batch_size == self.batch_size:
+                    # fixed batch size
+                    if self.batch_size > 0 and batch_size == self.batch_size:
                         batch = self.__batch_pack()
                         yield self.postprocess(batch)
                         self.batch_ = self.__batch_new()
                         batch_size = 0
+
+                # variable batch size
+                if self.batch_size < 1:
+                    batch = self.__batch_pack()
+                    yield self.postprocess(batch)
+                    self.batch_ = self.__batch_new()
+                    batch_size = 0
