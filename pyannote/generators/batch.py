@@ -47,7 +47,7 @@ class BaseBatchGenerator(object):
         return protocol_item
 
     def process(self, fragment, signature=None, identifier=None):
-        raise NotImplementedError()
+        return fragment
 
     def postprocess(self, batch, signature=None):
         return batch
