@@ -62,6 +62,10 @@ def random_subsegment(segment, duration):
         yield Segment(t, t + duration)
 
 
+def remove_short_segment(timeline, shorter_than):
+    return Timeline([s for s in timeline if s.duration > shorter_than])
+
+
 class SlidingSegments(object):
     """Fixed-duration running segment generator
 
@@ -255,8 +259,12 @@ class RandomSegmentsPerLabel(object):
         labels = from_annotation.labels()
         random_segments = RandomSegments(duration=self.duration, weighted=True)
         for label in labels:
-            annotation = from_annotation.subset([label])
-            segments = random_segments.iter_segments(annotation)
+            timeline = from_annotation.label_timeline(label)
+            if self.duration > 0:
+                timeline = remove_short_segment(timeline, self.duration)
+                if not timeline:
+                    continue
+            segments = random_segments.iter_segments(timeline)
             for s, segment in enumerate(segments):
                 if s == self.per_label:
                     break
