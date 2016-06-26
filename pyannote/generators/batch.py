@@ -129,7 +129,7 @@ class BaseBatchGenerator(object):
                 return {key: self.__batch_pack(signature=signature[key],
                                                batch=batch[key])
                         for key in signature.items()}
-            elif fragment_type in {PYANNOTE_SEGMENT, 'boolean'}:
+            elif fragment_type in {PYANNOTE_SEGMENT, 'sequence', 'boolean'}:
                 return np.stack(batch)
             else:
                 return batch
