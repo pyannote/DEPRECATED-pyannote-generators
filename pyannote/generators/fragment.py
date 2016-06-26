@@ -208,6 +208,61 @@ class RandomSegments(object):
                 yield segment
 
 
+class RandomSegmentsPerLabel(object):
+    """Labeled segments generator
+
+    Parameters
+    ----------
+    per_label: int, optional
+        Number of consecutive segments yielded with the same label
+        before switching to another label.
+    duration: float, optional
+        When provided, yield (random) subsegments with this `duration`.
+        Defaults to yielding full segments.
+    yield_label: boolean, optional
+        When True, yield triplets of (segment, label) pairs
+        Defaults to yielding segments.
+    """
+
+    def __init__(self, per_label=40, duration=0.0, yield_label=False):
+        super(RandomSegmentsPerLabel, self).__init__()
+        self.per_label = per_label
+        self.duration = duration
+        self.yield_label = yield_label
+
+    def signature(self):
+        if self.yield_label:
+            return (
+                {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
+                {'type': PYANNOTE_LABEL}
+            )
+        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+
+    def from_protocol_item(self, protocol_item):
+        _, _, reference = protocol_item
+        for segment in self.iter_segments(reference):
+            yield segment
+
+    def iter_segments(self, from_annotation):
+        """Yield segments
+
+        Parameters
+        ----------
+        from_annotation : Annotation
+            Annotation from which segments are obtained.
+        """
+
+        labels = from_annotation.labels()
+        random_segments = RandomSegments(duration=self.duration, weighted=True)
+        for label in labels:
+            annotation = from_annotation.subset([label])
+            segments = random_segments.iter_segments(annotation)
+            for s, segment in enumerate(segments):
+                if s == self.per_label:
+                    break
+                yield (segment, label) if self.yield_label else segment
+
+
 class RandomTracks(object):
     """(segment, track) tuple generator
 
