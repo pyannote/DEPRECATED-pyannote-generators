@@ -160,10 +160,11 @@ class BaseBatchGenerator(object):
         signature = self.generator.signature()
         return self.__batch_signature()
 
-    def from_protocol_item(self, protocol_item, identifier=None):
-        item = self.preprocess(protocol_item, identifier=identifier)
-        for fragment in self.generator.from_protocol_item(item):
-            yield fragment
+    def from_protocol_item(self, protocol_item):
+        def iter_func():
+            yield protocol_item
+        for batch in self.__call__(iter_func, infinite=False)
+            yield batch
 
     def __call__(self, protocol_iter_func, infinite=False):
 
@@ -173,9 +174,13 @@ class BaseBatchGenerator(object):
         first = True
         while first or infinite:
             first = False
-            for identifier, protocol_item in enumerate(protocol_iter_func()):
+            for protocol_item in protocol_iter_func():
 
-                for fragment in self.from_protocol_item(protocol_item, identifier=identifier):
+                # TODO - do better than that!!!
+                identifier = hash(hash(str(x)) for x in protocol_item))
+
+                item = self.preprocess(protocol_item, identifier=identifier)
+                for fragment in self.generator.from_protocol_item(item):
 
                     self.__batch_add(fragment, identifier=identifier)
                     batch_size += 1
