@@ -27,11 +27,36 @@
 # Hervé BREDIN - http://herve.niderb.fr
 
 
+import random
+import numpy as np
+
 from pyannote.core import Segment
 from pyannote.core import Timeline
 from pyannote.core import Annotation
 from pyannote.core import SlidingWindow
-import random
+
+
+def random_segment(segments, weighted=False):
+    """Generate segment with probability proportional to its duration"""
+
+    p = None
+    if weighted:
+        total = float(sum(s.duration for s in segments))
+        p = [s.duration / total for s in segments]
+
+    n_segments = len(segments)
+    while True:
+        i = np.random.choice(n_segments, p=p)
+        yield segments[i]
+
+
+def random_subsegment(segment, duration):
+    """Pick a subsegment at random"""
+    if segment.duration < duration:
+        raise ValueError('segment is too short')
+    while True:
+        t = segment.start + random.random() * (segment.duration - duration)
+        yield Segment(t, t + duration)
 
 
 class SlidingSegments(object):
@@ -116,10 +141,14 @@ class RandomSegments(object):
     duration: float, optional
         When provided, yield (random) subsegments with this `duration`.
         Defaults to yielding full segments.
+    weighted: boolean, optional
+        When True, probability of generating a segment is proportional to its
+        duration.
     """
-    def __init__(self, duration=0.):
+    def __init__(self, duration=0., weighted=False):
         super(RandomSegments, self).__init__()
         self.duration = duration
+        self.weighted = weighted
 
     def signature(self):
         return {'type': 'segment', 'duration': self.duration}
@@ -167,14 +196,11 @@ class RandomSegments(object):
         if not segments:
             raise ValueError('Source must contain at least one segment longer than requested duration.')
 
-        n_segments = len(segments)
-        while True:
-            index = random.randrange(n_segments)
-            segment = segments[index]
+        for segment in random_segment(segments, weighted=self.weighted):
             if self.duration:
                 if segment.duration < self.duration:
                     continue
-                yield self.pick(segment)
+                yield next(random_subsegment(segment, self.duration))
             else:
                 yield segment
 
