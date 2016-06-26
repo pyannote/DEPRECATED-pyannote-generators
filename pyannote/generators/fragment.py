@@ -137,7 +137,7 @@ class SlidingSegments(object):
 
 
 class RandomSegments(object):
-    """Random segment generator
+    """Infinitie random segment generator
 
     Parameters
     ----------
