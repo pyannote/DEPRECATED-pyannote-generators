@@ -28,6 +28,9 @@
 
 
 import numpy as np
+from pyannote.core import PYANNOTE_SEGMENT
+from pyannote.core import PYANNOTE_TRACK
+from pyannote.core import PYANNOTE_LABEL
 
 
 class BaseBatchGenerator(object):
@@ -63,17 +66,14 @@ class BaseBatchGenerator(object):
                     for _signature in signature])
 
         elif isinstance(signature, dict):
-
             fragment_type = signature.get('type', None)
-
-            if fragment_type in set(['segment', 'boolean']):
-                return []
 
             if fragment_type is None:
                 return {key: self.__batch_new(signature=_signature)
                         for key, _signature in signature.items()}
+            else:
+                return []
 
-            raise NotImplementedError('')
 
     def __batch_add(self, fragment, signature=None, batch=None, identifier=None):
 
@@ -93,24 +93,17 @@ class BaseBatchGenerator(object):
         elif isinstance(signature, dict):
             fragment_type = signature.get('type', None)
 
-            if fragment_type == 'segment':
-                processed = self.process(fragment,
-                                         signature=signature,
-                                         identifier=identifier)
-                batch.append(processed)
-
-            elif fragment_type == 'boolean':
-                processed = self.process(fragment,
-                                         signature=signature,
-                                         identifier=identifier)
-                batch.append(processed)
-
-            else:
+            if fragment_type is None:
                 for key in signature:
                     self.__batch_add(fragment[key],
                                      signature=signature[key],
                                      batch=batch[key],
                                      identifier=identifier)
+            else:
+                processed = self.process(fragment,
+                                         signature=signature,
+                                         identifier=identifier)
+                batch.append(processed)
 
     def __batch_pack(self, signature=None, batch=None):
 
@@ -132,13 +125,43 @@ class BaseBatchGenerator(object):
 
             fragment_type = signature.get('type', None)
 
-            if fragment_type in set(['segment', 'boolean']):
-                return np.stack(batch)
-
-            else:
+            if fragment_type is None:
                 return {key: self.__batch_pack(signature=signature[key],
                                                batch=batch[key])
                         for key in signature.items()}
+            elif fragment_type in {PYANNOTE_SEGMENT, 'boolean'}:
+                return np.stack(batch)
+            else:
+                return batch
+
+    def __batch_signature(self, signature=None):
+
+        if signature is None:
+            signature = self.generator.signature()
+
+        if isinstance(signature, list):
+            return list(self.__batch_signature(signature=_signature)
+                        for _signature in signature)
+
+        elif isinstance(signature, tuple):
+            return tuple(self.__batch_signature(signature=_signature)
+                          for _signature in signature)
+
+        elif isinstance(signature, dict):
+
+            fragment_type = signature.get('type', None)
+
+            if fragment_type is None:
+                return {key: self.__batch_signature(signature=signature[key])
+                        for key in signature}
+            elif fragment_type in {PYANNOTE_SEGMENT, 'boolean'}:
+                return {'type': 'batch'}
+            else:
+                return {'type': 'list'}
+
+    def signature(self):
+        signature = self.generator.signature()
+        return self.__batch_signature()
 
     def from_protocol_item(self, protocol_item, identifier=None):
         item = self.preprocess(protocol_item, identifier=identifier)
