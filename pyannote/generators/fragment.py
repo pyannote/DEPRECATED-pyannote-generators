@@ -34,6 +34,9 @@ from pyannote.core import Segment
 from pyannote.core import Timeline
 from pyannote.core import Annotation
 from pyannote.core import SlidingWindow
+from pyannote.core import PYANNOTE_SEGMENT
+from pyannote.core import PYANNOTE_TRACK
+from pyannote.core import PYANNOTE_LABEL
 
 
 def random_segment(segments, weighted=False):
@@ -82,7 +85,7 @@ class SlidingSegments(object):
         self.step = step
 
     def signature(self):
-        return {'type': 'segment', 'duration': self.duration}
+        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def __call__(self, protocol_item):
         _, _, reference = protocol_item
@@ -151,7 +154,7 @@ class RandomSegments(object):
         self.weighted = weighted
 
     def signature(self):
-        return {'type': 'segment', 'duration': self.duration}
+        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def pick(self, segment):
         """Pick a subsegment at random"""
@@ -221,11 +224,11 @@ class RandomTracks(object):
 
     def signature(self):
         signature = [
-            {'type': 'segment', 'duration': self.duration},
-            {'type': 'track'}
+            {'type': PYANNOTE_SEGMENT, 'duration': 0.0},
+            {'type': PYANNOTE_TRACK}
         ]
         if self.yield_label:
-            signature.append({'type': 'label'})
+            signature.append({'type': PYANNOTE_LABEL})
         return signature
 
     def __call__(self, protocol_item):
@@ -332,10 +335,10 @@ class RandomSegmentTriplets(object):
 
     def signature(self):
         if self.yield_label:
-            return 3 * [{'type': 'segment', 'duration': self.duration},
+            return 3 * [{'type': PYANNOTE_SEGMENT, 'duration': self.duration},
                         {'type': 'label'}]
         else:
-            return 3 * [{'type': 'segment', 'duration': self.duration}]
+            return 3 * [{'type': PYANNOTE_SEGMENT, 'duration': self.duration}]
 
     def pick(self, segment):
         """Pick a subsegment at random"""
