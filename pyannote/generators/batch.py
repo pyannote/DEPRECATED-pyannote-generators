@@ -154,10 +154,7 @@ class BaseBatchGenerator(object):
             if fragment_type is None:
                 return {key: self.__batch_signature(signature=signature[key])
                         for key in signature}
-            elif fragment_type in {PYANNOTE_SEGMENT, 'boolean'}:
-                return {'type': 'batch'}
-            else:
-                return {'type': 'list'}
+            return {'type': 'batch'}
 
     def signature(self):
         signature = self.generator.signature()
