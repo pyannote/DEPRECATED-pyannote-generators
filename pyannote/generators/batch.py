@@ -31,11 +31,9 @@ import numpy as np
 
 
 class BaseBatchGenerator(object):
-
-    def __init__(self, fragment_generator, batch_size=32):
+    def __init__(self, generator, batch_size=32):
         super(BaseBatchGenerator, self).__init__()
-        self.fragment_generator = fragment_generator
-        self.signature_ = self.fragment_generator.signature()
+        self.generator = generator
         self.batch_size = batch_size
 
     # identifier is useful for thread-safe protocol_item dependent preprocessing
@@ -54,7 +52,7 @@ class BaseBatchGenerator(object):
     def __batch_new(self, signature=None):
 
         if signature is None:
-            signature = self.signature_
+            signature = self.generator.signature()
 
         if isinstance(signature, list):
             return [self.__batch_new(signature=_signature)
@@ -80,7 +78,7 @@ class BaseBatchGenerator(object):
     def __batch_add(self, fragment, signature=None, batch=None, identifier=None):
 
         if signature is None:
-            signature = self.signature_
+            signature = self.generator.signature()
 
         if batch is None:
             batch = self.batch_
@@ -117,7 +115,7 @@ class BaseBatchGenerator(object):
     def __batch_pack(self, signature=None, batch=None):
 
         if signature is None:
-            signature = self.signature_
+            signature = self.generator.signature()
 
         if batch is None:
             batch = self.batch_
@@ -142,6 +140,10 @@ class BaseBatchGenerator(object):
                                                batch=batch[key])
                         for key in signature.items()}
 
+    def from_protocol_item(self, protocol_item, identifier=None):
+        item = self.preprocess(protocol_item, identifier=identifier)
+        for fragment in self.generator.from_protocol_item(item):
+            yield fragment
 
     def __call__(self, protocol_iter_func, infinite=False):
 
@@ -153,9 +155,7 @@ class BaseBatchGenerator(object):
             first = False
             for identifier, protocol_item in enumerate(protocol_iter_func()):
 
-                item = self.preprocess(protocol_item, identifier=identifier)
-
-                for fragment in self.fragment_generator(item):
+                for fragment in self.from_protocol_item(protocol_item, identifier=identifier):
 
                     self.__batch_add(fragment, identifier=identifier)
                     batch_size += 1
