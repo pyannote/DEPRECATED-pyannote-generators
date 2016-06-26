@@ -87,7 +87,7 @@ class SlidingSegments(object):
     def signature(self):
         return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for segment in self.iter_segments(reference):
             yield segment
@@ -161,7 +161,7 @@ class RandomSegments(object):
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for segment in self.iter_segments(reference):
             yield segment
@@ -231,7 +231,7 @@ class RandomTracks(object):
             signature.append({'type': PYANNOTE_LABEL})
         return signature
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for track in self.iter_tracks(reference):
             yield track
@@ -279,7 +279,7 @@ class RandomTrackTriplets(object):
     def signature(self):
         return [RandomTracks(yield_label=self.yield_label).signature()] * 3
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for triplet in self.iter_triplets(reference):
             yield triplet
@@ -345,7 +345,7 @@ class RandomSegmentTriplets(object):
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for triplet in self.iter_triplets(reference):
             yield triplet
@@ -421,7 +421,7 @@ class RandomSegmentPairs(object):
         signature = t.signature()
         return [(signature[0], signature[0]), {'type': 'boolean'}]
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for pair in self.iter_pairs(reference):
             yield pair
