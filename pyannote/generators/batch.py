@@ -177,9 +177,11 @@ class BaseBatchGenerator(object):
             for protocol_item in protocol_iter_func():
 
                 # TODO - do better than that!!!
-                identifier = hash(hash(str(x)) for x in protocol_item)
+                wav, _, _ = protocol_item
+                identifier = hash(wav)
 
                 item = self.preprocess(protocol_item, identifier=identifier)
+
                 for fragment in self.generator.from_protocol_item(item):
 
                     self.__batch_add(fragment, identifier=identifier)
