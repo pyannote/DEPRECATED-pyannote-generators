@@ -28,14 +28,15 @@
 
 
 import numpy as np
+from pyannote.core import PYANNOTE_SEGMENT
+from pyannote.core import PYANNOTE_TRACK
+from pyannote.core import PYANNOTE_LABEL
 
 
 class BaseBatchGenerator(object):
-
-    def __init__(self, fragment_generator, batch_size=32):
+    def __init__(self, generator, batch_size=32):
         super(BaseBatchGenerator, self).__init__()
-        self.fragment_generator = fragment_generator
-        self.signature_ = self.fragment_generator.signature()
+        self.generator = generator
         self.batch_size = batch_size
 
     # identifier is useful for thread-safe protocol_item dependent preprocessing
@@ -46,7 +47,7 @@ class BaseBatchGenerator(object):
         return protocol_item
 
     def process(self, fragment, signature=None, identifier=None):
-        raise NotImplementedError()
+        return fragment
 
     def postprocess(self, batch, signature=None):
         return batch
@@ -54,7 +55,7 @@ class BaseBatchGenerator(object):
     def __batch_new(self, signature=None):
 
         if signature is None:
-            signature = self.signature_
+            signature = self.generator.signature()
 
         if isinstance(signature, list):
             return [self.__batch_new(signature=_signature)
@@ -65,22 +66,19 @@ class BaseBatchGenerator(object):
                     for _signature in signature])
 
         elif isinstance(signature, dict):
-
             fragment_type = signature.get('type', None)
-
-            if fragment_type in set(['segment', 'boolean']):
-                return []
 
             if fragment_type is None:
                 return {key: self.__batch_new(signature=_signature)
                         for key, _signature in signature.items()}
+            else:
+                return []
 
-            raise NotImplementedError('')
 
     def __batch_add(self, fragment, signature=None, batch=None, identifier=None):
 
         if signature is None:
-            signature = self.signature_
+            signature = self.generator.signature()
 
         if batch is None:
             batch = self.batch_
@@ -95,29 +93,22 @@ class BaseBatchGenerator(object):
         elif isinstance(signature, dict):
             fragment_type = signature.get('type', None)
 
-            if fragment_type == 'segment':
-                processed = self.process(fragment,
-                                         signature=signature,
-                                         identifier=identifier)
-                batch.append(processed)
-
-            elif fragment_type == 'boolean':
-                processed = self.process(fragment,
-                                         signature=signature,
-                                         identifier=identifier)
-                batch.append(processed)
-
-            else:
+            if fragment_type is None:
                 for key in signature:
                     self.__batch_add(fragment[key],
                                      signature=signature[key],
                                      batch=batch[key],
                                      identifier=identifier)
+            else:
+                processed = self.process(fragment,
+                                         signature=signature,
+                                         identifier=identifier)
+                batch.append(processed)
 
     def __batch_pack(self, signature=None, batch=None):
 
         if signature is None:
-            signature = self.signature_
+            signature = self.generator.signature()
 
         if batch is None:
             batch = self.batch_
@@ -134,14 +125,46 @@ class BaseBatchGenerator(object):
 
             fragment_type = signature.get('type', None)
 
-            if fragment_type in set(['segment', 'boolean']):
-                return np.stack(batch)
-
-            else:
+            if fragment_type is None:
                 return {key: self.__batch_pack(signature=signature[key],
                                                batch=batch[key])
                         for key in signature.items()}
+            elif fragment_type in {PYANNOTE_SEGMENT, 'sequence', 'boolean'}:
+                return np.stack(batch)
+            else:
+                return batch
 
+    def __batch_signature(self, signature=None):
+
+        if signature is None:
+            signature = self.generator.signature()
+
+        if isinstance(signature, list):
+            return list(self.__batch_signature(signature=_signature)
+                        for _signature in signature)
+
+        elif isinstance(signature, tuple):
+            return tuple(self.__batch_signature(signature=_signature)
+                          for _signature in signature)
+
+        elif isinstance(signature, dict):
+
+            fragment_type = signature.get('type', None)
+
+            if fragment_type is None:
+                return {key: self.__batch_signature(signature=signature[key])
+                        for key in signature}
+            return {'type': 'batch'}
+
+    def signature(self):
+        signature = self.generator.signature()
+        return self.__batch_signature()
+
+    def from_protocol_item(self, protocol_item):
+        def iter_func():
+            yield protocol_item
+        for batch in self.__call__(iter_func, infinite=False):
+            yield batch
 
     def __call__(self, protocol_iter_func, infinite=False):
 
@@ -151,17 +174,29 @@ class BaseBatchGenerator(object):
         first = True
         while first or infinite:
             first = False
-            for identifier, protocol_item in enumerate(protocol_iter_func()):
+            for protocol_item in protocol_iter_func():
+
+                # TODO - do better than that!!!
+                wav, _, _ = protocol_item
+                identifier = hash(wav)
 
                 item = self.preprocess(protocol_item, identifier=identifier)
 
-                for fragment in self.fragment_generator(item):
+                for fragment in self.generator.from_protocol_item(item):
 
                     self.__batch_add(fragment, identifier=identifier)
                     batch_size += 1
 
-                    if batch_size == self.batch_size:
+                    # fixed batch size
+                    if self.batch_size > 0 and batch_size == self.batch_size:
                         batch = self.__batch_pack()
                         yield self.postprocess(batch)
                         self.batch_ = self.__batch_new()
                         batch_size = 0
+
+                # variable batch size
+                if self.batch_size < 1:
+                    batch = self.__batch_pack()
+                    yield self.postprocess(batch)
+                    self.batch_ = self.__batch_new()
+                    batch_size = 0

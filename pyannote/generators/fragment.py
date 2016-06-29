@@ -27,11 +27,43 @@
 # Hervé BREDIN - http://herve.niderb.fr
 
 
+import random
+import numpy as np
+
 from pyannote.core import Segment
 from pyannote.core import Timeline
 from pyannote.core import Annotation
 from pyannote.core import SlidingWindow
-import random
+from pyannote.core import PYANNOTE_SEGMENT
+from pyannote.core import PYANNOTE_TRACK
+from pyannote.core import PYANNOTE_LABEL
+
+
+def random_segment(segments, weighted=False):
+    """Generate segment with probability proportional to its duration"""
+
+    p = None
+    if weighted:
+        total = float(sum(s.duration for s in segments))
+        p = [s.duration / total for s in segments]
+
+    n_segments = len(segments)
+    while True:
+        i = np.random.choice(n_segments, p=p)
+        yield segments[i]
+
+
+def random_subsegment(segment, duration):
+    """Pick a subsegment at random"""
+    if segment.duration < duration:
+        raise ValueError('segment is too short')
+    while True:
+        t = segment.start + random.random() * (segment.duration - duration)
+        yield Segment(t, t + duration)
+
+
+def remove_short_segment(timeline, shorter_than):
+    return Timeline([s for s in timeline if s.duration > shorter_than])
 
 
 class SlidingSegments(object):
@@ -57,9 +89,9 @@ class SlidingSegments(object):
         self.step = step
 
     def signature(self):
-        return {'type': 'segment', 'duration': self.duration}
+        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for segment in self.iter_segments(reference):
             yield segment
@@ -109,27 +141,31 @@ class SlidingSegments(object):
 
 
 class RandomSegments(object):
-    """Random segment generator
+    """Infinitie random segment generator
 
     Parameters
     ----------
     duration: float, optional
         When provided, yield (random) subsegments with this `duration`.
         Defaults to yielding full segments.
+    weighted: boolean, optional
+        When True, probability of generating a segment is proportional to its
+        duration.
     """
-    def __init__(self, duration=0.):
+    def __init__(self, duration=0., weighted=False):
         super(RandomSegments, self).__init__()
         self.duration = duration
+        self.weighted = weighted
 
     def signature(self):
-        return {'type': 'segment', 'duration': self.duration}
+        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def pick(self, segment):
         """Pick a subsegment at random"""
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for segment in self.iter_segments(reference):
             yield segment
@@ -167,16 +203,72 @@ class RandomSegments(object):
         if not segments:
             raise ValueError('Source must contain at least one segment longer than requested duration.')
 
-        n_segments = len(segments)
-        while True:
-            index = random.randrange(n_segments)
-            segment = segments[index]
+        for segment in random_segment(segments, weighted=self.weighted):
             if self.duration:
                 if segment.duration < self.duration:
                     continue
-                yield self.pick(segment)
+                yield next(random_subsegment(segment, self.duration))
             else:
                 yield segment
+
+
+class RandomSegmentsPerLabel(object):
+    """Labeled segments generator
+
+    Parameters
+    ----------
+    per_label: int, optional
+        Number of consecutive segments yielded with the same label
+        before switching to another label.
+    duration: float, optional
+        When provided, yield (random) subsegments with this `duration`.
+        Defaults to yielding full segments.
+    yield_label: boolean, optional
+        When True, yield triplets of (segment, label) pairs
+        Defaults to yielding segments.
+    """
+
+    def __init__(self, per_label=40, duration=0.0, yield_label=False):
+        super(RandomSegmentsPerLabel, self).__init__()
+        self.per_label = per_label
+        self.duration = duration
+        self.yield_label = yield_label
+
+    def signature(self):
+        if self.yield_label:
+            return (
+                {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
+                {'type': PYANNOTE_LABEL}
+            )
+        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+
+    def from_protocol_item(self, protocol_item):
+        _, _, reference = protocol_item
+        for segment in self.iter_segments(reference):
+            yield segment
+
+    def iter_segments(self, from_annotation):
+        """Yield segments
+
+        Parameters
+        ----------
+        from_annotation : Annotation
+            Annotation from which segments are obtained.
+        """
+
+        labels = from_annotation.labels()
+        random_segments = RandomSegments(duration=self.duration, weighted=True)
+        for label in labels:
+            timeline = from_annotation.label_timeline(label)
+            if self.duration > 0:
+                timeline = remove_short_segment(timeline, self.duration)
+                if not timeline:
+                    continue
+            segments = random_segments.iter_segments(timeline)
+            for s, segment in enumerate(segments):
+                if s == self.per_label:
+                    break
+                yield (segment, label) if self.yield_label else segment
 
 
 class RandomTracks(object):
@@ -195,14 +287,14 @@ class RandomTracks(object):
 
     def signature(self):
         signature = [
-            {'type': 'segment', 'duration': self.duration},
-            {'type': 'track'}
+            {'type': PYANNOTE_SEGMENT, 'duration': 0.0},
+            {'type': PYANNOTE_TRACK}
         ]
         if self.yield_label:
-            signature.append({'type': 'label'})
+            signature.append({'type': PYANNOTE_LABEL})
         return signature
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for track in self.iter_tracks(reference):
             yield track
@@ -250,7 +342,7 @@ class RandomTrackTriplets(object):
     def signature(self):
         return [RandomTracks(yield_label=self.yield_label).signature()] * 3
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for triplet in self.iter_triplets(reference):
             yield triplet
@@ -306,17 +398,17 @@ class RandomSegmentTriplets(object):
 
     def signature(self):
         if self.yield_label:
-            return 3 * [{'type': 'segment', 'duration': self.duration},
+            return 3 * [{'type': PYANNOTE_SEGMENT, 'duration': self.duration},
                         {'type': 'label'}]
         else:
-            return 3 * [{'type': 'segment', 'duration': self.duration}]
+            return 3 * [{'type': PYANNOTE_SEGMENT, 'duration': self.duration}]
 
     def pick(self, segment):
         """Pick a subsegment at random"""
         t = segment.start + random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for triplet in self.iter_triplets(reference):
             yield triplet
@@ -392,7 +484,7 @@ class RandomSegmentPairs(object):
         signature = t.signature()
         return [(signature[0], signature[0]), {'type': 'boolean'}]
 
-    def __call__(self, protocol_item):
+    def from_protocol_item(self, protocol_item):
         _, _, reference = protocol_item
         for pair in self.iter_pairs(reference):
             yield pair
