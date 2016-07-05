@@ -140,6 +140,62 @@ class SlidingSegments(object):
                     yield s
 
 
+class SlidingLabeledSegments(object):
+    """Fixed-duration running segment generator
+
+    Parameters
+    ----------
+    duration: float, optional
+        Segment duration. Defaults to 3.2 seconds.
+    step: float, optional
+        Step duration. Defaults to 0.8 seconds.
+    """
+
+    def __init__(self, duration=3.2, step=0.8):
+        super(SlidingLabeledSegments, self).__init__()
+
+        if not duration > 0:
+            raise ValueError('Duration must be strictly positive.')
+        self.duration = duration
+
+        if not step > 0:
+            raise ValueError('Step must be strictly positive.')
+        self.step = step
+
+    def signature(self):
+        return (
+            {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
+            {'type': PYANNOTE_LABEL}
+        )
+
+    def from_file(self, current_file):
+        _, _, reference = current_file
+        for segment in self.iter_segments(reference):
+            yield segment
+
+    def iter_segments(self, from_annotation):
+        """
+        Parameters
+        ----------
+        from_annotation : Annotation
+            If `Annotation`, yield running segments within its timeline.
+        """
+
+        if not isinstance(from_annotation, Annotation):
+            raise TypeError('')
+
+        for segment, _, label in from_annotation.itertracks(label=True):
+            window = SlidingWindow(duration=self.duration,
+                                   step=self.step,
+                                   start=segment.start,
+                                   end=segment.end)
+            for s in window:
+                # this is needed because window may go beyond segment.end
+                if s in segment:
+                    yield (s, label)
+
+
+
 class RandomSegments(object):
     """Infinitie random segment generator
 
