@@ -75,9 +75,11 @@ class SlidingSegments(object):
         Segment duration. Defaults to 3.2 seconds.
     step: float, optional
         Step duration. Defaults to 0.8 seconds.
+    source: 'uem', 'coverage', 'reference'
+        Defaults to 'reference'
     """
 
-    def __init__(self, duration=3.2, step=0.8):
+    def __init__(self, duration=3.2, step=0.8, source='reference'):
         super(SlidingSegments, self).__init__()
 
         if not duration > 0:
@@ -88,12 +90,27 @@ class SlidingSegments(object):
             raise ValueError('Step must be strictly positive.')
         self.step = step
 
+        self.source = source
+
     def signature(self):
         return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for segment in self.iter_segments(reference):
+        wav, uem, reference = current_file
+
+        if self.source == 'uem':
+            source = uem
+
+        elif self.source == 'reference':
+            source = reference
+
+        elif self.source == 'coverage':
+            source = reference.get_timeline().coverage()
+
+        else:
+            raise ValueError('source must be one of "uem", "reference" or "coverage"')
+
+        for segment in self.iter_segments(source):
             yield segment
 
     def iter_segments(self, source):
