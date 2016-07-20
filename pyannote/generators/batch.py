@@ -52,6 +52,8 @@ class BaseBatchGenerator(object):
 
     def postprocess(self, batch):
         """Optional batch post-processing
+    def _passthrough(self, x, **kwargs):
+        return x
 
         Defaults to do nothing
         """
@@ -78,9 +80,6 @@ class BaseBatchGenerator(object):
                         for key, _signature_out in signature_out.items()}
             else:
                 return []
-
-    def fragment_passthrough(self, fragment, **kwargs):
-        return fragment
 
     def _batch_add(self, fragment, signature_in, signature_out, batch=None, **kwargs):
 
@@ -122,13 +121,10 @@ class BaseBatchGenerator(object):
 
                 else:
                     process_func = getattr(self, 'process_' + fragment_type,
-                                           self.fragment_passthrough)
+                                           self._passthrough)
                     processed = process_func(fragment, signature=signature_in,
                                              **kwargs)
                     self._batch_add(processed, None, signature_out, batch=batch)
-
-    def batch_passthrough(self, batch):
-        return batch
 
     def pack_sequence(self, batch):
         return np.stack(batch)
@@ -164,7 +160,7 @@ class BaseBatchGenerator(object):
                         for key in signature_out.items()}
             else:
                 pack_func = getattr(self, 'pack_' + fragment_type,
-                                    self.batch_passthrough)
+                                    self._passthrough)
                 return pack_func(batch)
 
     def _batch_signature(self, signature_in):
