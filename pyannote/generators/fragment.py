@@ -161,6 +161,35 @@ class SlidingSegments(object):
                     yield s
 
 
+class TwinSlidingSegments(SlidingSegments):
+
+    def __init__(self, duration=3.2, step=0.8, gap=0.0):
+        super(TwinSlidingSegments, self).__init__(
+            duration=duration, step=step, source='wav')
+        self.gap = gap
+
+    def signature(self):
+        return (
+            {'type': 'timestamp'},
+            {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
+            {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+        )
+
+    def from_file(self, current_file):
+        wav, uem, reference = current_file
+
+        from pyannote.audio.features.utils import get_wav_duration
+        duration = get_wav_duration(wav)
+
+        for left in self.iter_segments(duration):
+            right = Segment(left.end + self.gap,
+                            left.end + self.duration + self.gap)
+            if right.end < duration:
+                t = .5 * (left.end + right.start)
+                yield t, left, right
+
+
+
 class SlidingLabeledSegments(object):
     """Fixed-duration running segment generator
 
