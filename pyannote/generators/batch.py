@@ -138,6 +138,9 @@ class BaseBatchGenerator(object):
     def pack_boolean(self, batch):
         return np.array(batch)
 
+    def pack_timestamp(self, batch):
+        return np.array(batch)
+
     def _batch_pack(self, signature_out, batch=None):
 
         if batch is None:
