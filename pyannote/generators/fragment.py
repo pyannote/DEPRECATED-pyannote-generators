@@ -136,7 +136,7 @@ class SlidingSegments(object):
         elif isinstance(source, (int, float)):
             if not self.duration > 0:
                 raise ValueError('Duration must be strictly positive.')
-            segments = [Segment(0, duration)]
+            segments = [Segment(0, source)]
 
         else:
             raise TypeError('source must be float, Segment, Timeline or Annotation')
