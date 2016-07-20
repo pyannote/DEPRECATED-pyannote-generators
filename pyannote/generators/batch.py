@@ -58,7 +58,8 @@ class BaseBatchGenerator(object):
         return batch
 
     def signature(self):
-        raise NotImplementedError('')
+        signature_in = self.generator.signature()
+        return self._batch_signature(signature_in)
 
     def _batch_new(self, signature_out):
 
@@ -186,9 +187,6 @@ class BaseBatchGenerator(object):
 
             return {'type': 'batch'}
 
-    def signature(self):
-        signature_in = self.generator.signature()
-        return self._batch_signature(signature_in)
 
     def __iter__(self):
         return self
