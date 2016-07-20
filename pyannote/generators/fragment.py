@@ -75,7 +75,7 @@ class SlidingSegments(object):
         Segment duration. Defaults to 3.2 seconds.
     step: float, optional
         Step duration. Defaults to 0.8 seconds.
-    source: 'uem', 'coverage', 'reference'
+    source: 'uem', 'coverage', 'reference', 'wav'
         Defaults to 'reference'
     """
 
@@ -106,6 +106,10 @@ class SlidingSegments(object):
 
         elif self.source == 'coverage':
             source = reference.get_timeline().coverage()
+
+        elif self.source == 'wav':
+            from pyannote.audio.features.utils import get_wav_duration
+            source = get_wav_duration(wav)
 
         else:
             raise ValueError('source must be one of "uem", "reference" or "coverage"')
