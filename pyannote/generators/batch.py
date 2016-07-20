@@ -50,14 +50,30 @@ class BaseBatchGenerator(object):
         self.batch_size = batch_size
         self.batch_generator_ = self.iter_batches()
 
-    def postprocess(self, batch):
-        """Optional batch post-processing
     def _passthrough(self, x, **kwargs):
         return x
 
-        Defaults to do nothing
-        """
-        return batch
+    # signature
+
+    def _batch_signature(self, signature_in):
+
+        if isinstance(signature_in, list):
+            return list(self._batch_signature(_signature)
+                        for _signature in signature_in)
+
+        elif isinstance(signature_in, tuple):
+            return tuple(self._batch_signature(_signature)
+                          for _signature in signature_in)
+
+        elif isinstance(signature_in, dict):
+
+            fragment_type = signature_in.get('type', None)
+
+            if fragment_type is None:
+                return {key: self._batch_signature(signature_in[key])
+                        for key in signature_in}
+
+            return {'type': 'batch'}
 
     def signature(self):
         signature_in = self.generator.signature()
@@ -163,26 +179,29 @@ class BaseBatchGenerator(object):
                                     self._passthrough)
                 return pack_func(batch)
 
-    def _batch_signature(self, signature_in):
+    def _postprocess(self, batch, signature):
 
-        if isinstance(signature_in, list):
-            return list(self._batch_signature(_signature)
-                        for _signature in signature_in)
+        if type(signature) == list:
+            return [self._postprocess(_batch, _signature)
+                    for _batch, _signature in zip(batch, signature)]
 
-        elif isinstance(signature_in, tuple):
-            return tuple(self._batch_signature(_signature)
-                          for _signature in signature_in)
+        elif type(signature) == tuple:
+            return tuple([self._postprocess(_batch, _signature)
+                         for _batch, _signature in zip(batch, signature)])
 
-        elif isinstance(signature_in, dict):
+        elif type(signature) == dict:
+            batch_type = signature.get('type', None)
+            if batch_type is None:
+                return {key: self._postprocess(batch[key], signature[key])
+                        for key in signature.items()}
 
-            fragment_type = signature_in.get('type', None)
+            else:
+                postprocess_func = getattr(self, 'postprocess_' + batch_type,
+                                           self._passthrough)
+                return postprocess_func(batch)
 
-            if fragment_type is None:
-                return {key: self._batch_signature(signature_in[key])
-                        for key in signature_in}
-
-            return {'type': 'batch'}
-
+    def postprocess(self, batch):
+        return self._postprocess(batch, self.signature())
 
     def __iter__(self):
         return self
