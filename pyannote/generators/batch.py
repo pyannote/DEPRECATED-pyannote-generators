@@ -34,6 +34,10 @@ from pyannote.core import PYANNOTE_TRACK
 from pyannote.core import PYANNOTE_LABEL
 
 
+class InputOutputSignatureMismatch(Exception):
+    pass
+
+
 class BaseBatchGenerator(object):
     """Base class to pack batches out of a generator
 
@@ -50,10 +54,48 @@ class BaseBatchGenerator(object):
         self.batch_size = batch_size
         self.batch_generator_ = self.iter_batches()
 
+        signature_in = self.generator.signature()
+        signature_out = self.signature()
+        self._check_signature(signature_in, signature_out)
+
     def _passthrough(self, x, **kwargs):
         return x
 
     # signature
+
+    def _check_signature(self, sign_in, sign_out):
+
+        if type(sign_in) == dict:
+
+            if 'type' in sign_in:
+                return True
+
+            if sign_in.keys() != sign_out.keys():
+                msg = 'Key mismatch (input: {keys_in}, output: {keys_out}).'
+                raise InputOutputSignatureMismatch(
+                    msg.format(keys_in=sign_in.keys(), keys_out=sign_out.keys()))
+
+            for key in sign_out:
+                self._check_signature(sign_in[key], sign_out[key])
+
+        elif type(sign_in) != type(sign_out):
+
+            msg = 'Type mismatch (input: {type_in}, output: {type_out}).'
+            raise InputOutputSignatureMismatch(
+                msg.format(type_in=type(sign_in),
+                           type_out=type(sign_out)))
+
+        elif len(sign_in) != len(sign_out):
+
+            msg = 'Length mismatch (input: {length_in}, output: {length_out}).'
+            raise InputOutputSignatureMismatch(
+                msg.format(length_in=len(sign_in), length_out=len(sign_out)))
+
+        else:
+
+            for si, so in zip(sign_in, sign_out):
+                self._check_signature(si, so)
+
 
     def _batch_signature(self, signature_in):
 
