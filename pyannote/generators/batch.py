@@ -39,7 +39,7 @@ class InputOutputSignatureMismatch(Exception):
 
 
 class BaseBatchGenerator(object):
-    """Base class to pack batches out of a generator
+    """Base class to pack and yield batches out of a generator
 
     Parameters
     ----------

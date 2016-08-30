@@ -191,14 +191,17 @@ class TwinSlidingSegments(SlidingSegments):
 
 
 class SlidingLabeledSegments(object):
-    """Fixed-duration running segment generator
+    """(segment, label) tuple generator
+
+    Yields segment using a sliding window over the coverage of the reference.
+    Heterogeneous segments (i.e. containing more than one label) are skipped.
 
     Parameters
     ----------
     duration: float, optional
-        Segment duration. Defaults to 3.2 seconds.
     step: float, optional
-        Step duration. Defaults to 0.8 seconds.
+        Duration and step of sliding window (in seconds).
+        Default to 3.2 and 0.8.
     """
 
     def __init__(self, duration=3.2, step=0.8):
