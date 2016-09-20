@@ -75,11 +75,11 @@ class SlidingSegments(object):
         Segment duration. Defaults to 3.2 seconds.
     step: float, optional
         Step duration. Defaults to 0.8 seconds.
-    source: 'uem', 'coverage', 'reference', 'wav'
-        Defaults to 'reference'
+    source: 'annotated', 'coverage', 'annotation', 'wav'
+        Defaults to 'annotation'
     """
 
-    def __init__(self, duration=3.2, step=0.8, source='reference'):
+    def __init__(self, duration=3.2, step=0.8, source='annotation'):
         super(SlidingSegments, self).__init__()
 
         if not duration > 0:
@@ -96,23 +96,23 @@ class SlidingSegments(object):
         return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def from_file(self, current_file):
-        wav, uem, reference = current_file
 
-        if self.source == 'uem':
-            source = uem
+        if self.source == 'annotated':
+            source = current_file['annotated']
 
-        elif self.source == 'reference':
-            source = reference
+        elif self.source == 'annotation':
+            source = current_file['annotation']
 
         elif self.source == 'coverage':
-            source = reference.get_timeline().coverage()
+            source = current_file['annotation'].get_timeline().coverage()
 
         elif self.source == 'wav':
             from pyannote.audio.features.utils import get_wav_duration
+            wav = current_file['wav']
             source = get_wav_duration(wav)
 
         else:
-            raise ValueError('source must be one of "uem", "reference" or "coverage"')
+            raise ValueError('source must be one of "annotated", "annotation", "coverage" or "wav"')
 
         for segment in self.iter_segments(source):
             yield segment
@@ -143,12 +143,15 @@ class SlidingSegments(object):
             segments = [Segment(0, source)]
 
         else:
-            raise TypeError('source must be float, Segment, Timeline or Annotation')
+            raise TypeError(
+                'source must be float, Segment, Timeline or Annotation')
 
         segments = [segment for segment in segments
-                            if segment.duration > self.duration]
+                    if segment.duration > self.duration]
         if not segments:
-            raise ValueError('Source must contain at least one segment longer than requested duration.')
+            raise ValueError(
+                'Source must contain at least one segment longer '
+                'than requested duration.')
 
         for segment in segments:
             window = SlidingWindow(duration=self.duration,
@@ -176,9 +179,9 @@ class TwinSlidingSegments(SlidingSegments):
         )
 
     def from_file(self, current_file):
-        wav, uem, reference = current_file
-
         from pyannote.audio.features.utils import get_wav_duration
+
+        wav = current_file['wav']
         duration = get_wav_duration(wav)
 
         for left in self.iter_segments(duration):
@@ -187,7 +190,6 @@ class TwinSlidingSegments(SlidingSegments):
             if right.end < duration:
                 t = .5 * (left.end + right.start)
                 yield t, left, right
-
 
 
 class SlidingLabeledSegments(object):
@@ -222,8 +224,8 @@ class SlidingLabeledSegments(object):
         )
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for segment in self.iter_segments(reference):
+        annotation = current_file['annotation']
+        for segment in self.iter_segments(annotation):
             yield segment
 
     def iter_segments(self, from_annotation):
@@ -246,7 +248,6 @@ class SlidingLabeledSegments(object):
                 # this is needed because window may go beyond segment.end
                 if s in segment:
                     yield (s, label)
-
 
 
 class RandomSegments(object):
@@ -275,8 +276,8 @@ class RandomSegments(object):
         return Segment(t, t + self.duration)
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for segment in self.iter_segments(reference):
+        annotation = current_file['annotation']
+        for segment in self.iter_segments(annotation):
             yield segment
 
     def iter_segments(self, source):
@@ -305,12 +306,16 @@ class RandomSegments(object):
             segments = [Segment(0, duration)]
 
         else:
-            raise TypeError('source must be float, Segment, Timeline or Annotation')
+            raise TypeError(
+                'source must be float, Segment, Timeline or Annotation')
 
         segments = [segment for segment in segments
-                            if segment.duration > self.duration]
+                    if segment.duration > self.duration]
+
         if not segments:
-            raise ValueError('Source must contain at least one segment longer than requested duration.')
+            raise ValueError(
+                'Source must contain at least one segment longer '
+                'than requested duration.')
 
         for segment in random_segment(segments, weighted=self.weighted):
             if self.duration:
@@ -352,8 +357,8 @@ class RandomSegmentsPerLabel(object):
         return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for segment in self.iter_segments(reference):
+        annotation = current_file['annotation']
+        for segment in self.iter_segments(annotation):
             yield segment
 
     def iter_segments(self, from_annotation):
@@ -404,7 +409,7 @@ class RandomTracks(object):
         return signature
 
     def from_file(self, current_file):
-        _, _, reference = current_file
+        annotation = current_file['annotation']
         for track in self.iter_tracks(reference):
             yield track
 
@@ -452,8 +457,8 @@ class RandomTrackTriplets(object):
         return [RandomTracks(yield_label=self.yield_label).signature()] * 3
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for triplet in self.iter_triplets(reference):
+        annotation = current_file['annotation']
+        for triplet in self.iter_triplets(annotation):
             yield triplet
 
     def iter_triplets(self, from_annotation):
@@ -518,8 +523,8 @@ class RandomSegmentTriplets(object):
         return Segment(t, t + self.duration)
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for triplet in self.iter_triplets(reference):
+        annotation = current_file['annotation']
+        for triplet in self.iter_triplets(annotation):
             yield triplet
 
     def iter_triplets(self, from_annotation):
@@ -594,8 +599,8 @@ class RandomSegmentPairs(object):
         return [(signature[0], signature[0]), {'type': 'boolean'}]
 
     def from_file(self, current_file):
-        _, _, reference = current_file
-        for pair in self.iter_pairs(reference):
+        annotation = current_file['annotation']
+        for pair in self.iter_pairs(annotation):
             yield pair
 
     def iter_pairs(self, from_annotation):

@@ -278,6 +278,8 @@ class BaseBatchGenerator(object):
 
 class FileBasedBatchGenerator(BaseBatchGenerator):
     """
+
+
     Parameters
     ----------
     generator :
@@ -303,6 +305,22 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
             yield batch
 
     def __call__(self, file_generator, infinite=False):
+        """Generate batches by looping over a (possibly infinite) set of files
+
+        Parameters
+        ----------
+        file_generator : iterable
+            File generator yielding dictionaries at least containing the 'uri'
+            key (uri = uniform resource identifier). Typically, one would use
+            the 'train' method of a protocol available in pyannote.database.
+        infinite : boolean, optional
+            Set to True to loop over the file generator indefinitely.
+            Defaults to exhaust the file generator only once, and then stop.
+
+        See also
+        --------
+        pyannote.database
+        """
 
         signature_in = self.generator.signature()
         signature_out = self.signature()
@@ -315,7 +333,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
         for current_file in file_generator:
 
-            identifier = self.file_identifier(current_file)
+            identifier = current_file['uri']
 
             preprocessed_file = self.preprocess(current_file,
                                                 identifier=identifier)
