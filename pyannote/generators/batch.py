@@ -328,14 +328,13 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
         for current_file in file_generator:
 
-            identifier = current_file['uri']
+            uri = current_file['uri']
 
-            preprocessed_file = self.preprocess(current_file,
-                                                identifier=identifier)
+            preprocessed_file = self.preprocess(current_file, identifier=uri)
 
             for fragment in self.generator.from_file(preprocessed_file):
 
-                self._batch_add(fragment, signature_in, signature_out, identifier=identifier)
+                self._batch_add(fragment, signature_in, signature_out, identifier=uri)
                 batch_size += 1
 
                 # fixed batch size
