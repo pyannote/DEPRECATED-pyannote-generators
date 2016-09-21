@@ -293,11 +293,6 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         """
         return current_file
 
-    def file_identifier(self, current_file):
-        # TODO - do better than that!!!
-        wav, _, _ = current_file
-        return hash(wav)
-
     def from_file(self, current_file):
         def current_file_generator():
             yield current_file
