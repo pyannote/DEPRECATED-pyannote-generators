@@ -53,14 +53,35 @@ def random_segment(segments, weighted=False):
         yield segments[i]
 
 
-def random_subsegment(segment, duration):
-    """Pick a subsegment at random"""
-    if segment.duration < duration:
-        raise ValueError('segment is too short')
-    while True:
-        t = segment.start + random.random() * (segment.duration - duration)
-        yield Segment(t, t + duration)
+def random_subsegment(segment, duration, min_duration=None):
+    """Pick a subsegment at random
 
+    Parameters
+    ----------
+    segment : Segment
+    duration : float
+        Duration of random subsegment
+    min_duration : float, optional
+        When provided, choose segment duration at random between `min_duration`
+        and `duration` (instead of fixed `duration`).
+    """
+    if min_duration is None:
+        while True:
+            # draw start time from [segment.start, segment.end - duration]
+            t = segment.start + random.random() * (segment.duration - duration)
+            yield Segment(t, t + duration)
+
+    else:
+        # make sure max duration is smaller than actual segment duration
+        max_duration = min(segment.duration, duration)
+
+        while True:
+            # draw duration from [min_duration, max_duration] interval
+            rnd_duration = min_duration + random.random() * (max_duration - min_duration)
+
+            # draw start from [segment.start, segment.end - rnd_duration] interval
+            t = segment.start + random.random() * (segment.duration - rnd_duration)
+            yield Segment(t, t + rnd_duration)
 
 def remove_short_segment(timeline, shorter_than):
     return Timeline([s for s in timeline if s.duration > shorter_than])
