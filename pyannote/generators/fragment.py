@@ -53,14 +53,35 @@ def random_segment(segments, weighted=False):
         yield segments[i]
 
 
-def random_subsegment(segment, duration):
-    """Pick a subsegment at random"""
-    if segment.duration < duration:
-        raise ValueError('segment is too short')
-    while True:
-        t = segment.start + random.random() * (segment.duration - duration)
-        yield Segment(t, t + duration)
+def random_subsegment(segment, duration, min_duration=None):
+    """Pick a subsegment at random
 
+    Parameters
+    ----------
+    segment : Segment
+    duration : float
+        Duration of random subsegment
+    min_duration : float, optional
+        When provided, choose segment duration at random between `min_duration`
+        and `duration` (instead of fixed `duration`).
+    """
+    if min_duration is None:
+        while True:
+            # draw start time from [segment.start, segment.end - duration]
+            t = segment.start + random.random() * (segment.duration - duration)
+            yield Segment(t, t + duration)
+
+    else:
+        # make sure max duration is smaller than actual segment duration
+        max_duration = min(segment.duration, duration)
+
+        while True:
+            # draw duration from [min_duration, max_duration] interval
+            rnd_duration = min_duration + random.random() * (max_duration - min_duration)
+
+            # draw start from [segment.start, segment.end - rnd_duration] interval
+            t = segment.start + random.random() * (segment.duration - rnd_duration)
+            yield Segment(t, t + rnd_duration)
 
 def remove_short_segment(timeline, shorter_than):
     return Timeline([s for s in timeline if s.duration > shorter_than])
@@ -248,6 +269,73 @@ class SlidingLabeledSegments(object):
                 # this is needed because window may go beyond segment.end
                 if s in segment:
                     yield (s, label)
+
+
+class RandomLabeledSegments(object):
+    """(segment, label) tuple generator
+
+    Generate variable-duration random subsegments of original segments.
+    The number of subsegments is proportional to the duration of each segment.
+
+    Parameters
+    ----------
+    min_duration : float, optional
+        Defaults to 1.
+    max_duration: float, optional
+        Defaults to 5.
+    """
+
+    def __init__(self, min_duration=1., max_duration=5):
+        super(RandomLabeledSegments, self).__init__()
+        self.min_duration = min_duration
+        self.max_duration = max_duration
+
+    def signature(self):
+        return (
+            {'type': PYANNOTE_SEGMENT,
+             'min_duration': self.min_duration,
+             'max_duration': self.max_duration},
+            {'type': PYANNOTE_LABEL}
+        )
+
+    def from_file(self, current_file):
+        annotation = current_file['annotation']
+        for segment in self.iter_segments(annotation):
+            yield segment
+
+    def iter_segments(self, from_annotation):
+        """
+        Parameters
+        ----------
+        from_annotation : Annotation
+
+        Returns
+        -------
+        segment
+        label
+
+        """
+
+        for segment, _, label in from_annotation.itertracks(label=True):
+
+            # no need to continue if segment is shorter than minimum duration
+            duration = segment.duration
+            if duration < self.min_duration:
+                continue
+
+            # initialize random subsegment generator
+            generator = random_subsegment(segment,
+                                          self.max_duration,
+                                          min_duration=self.min_duration)
+
+            # number of subsegments is proportional
+            # to the duration of the original segment
+            n_subsegments = int(np.ceil(duration / self.min_duration))
+
+            # actual generate random subsegments
+            for _ in range(n_subsegments):
+                s = next(generator)
+                yield (s, label)
 
 
 class RandomSegments(object):
