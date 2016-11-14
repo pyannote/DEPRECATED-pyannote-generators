@@ -271,6 +271,73 @@ class SlidingLabeledSegments(object):
                     yield (s, label)
 
 
+class RandomLabeledSegments(object):
+    """(segment, label) tuple generator
+
+    Generate variable-duration random subsegments of original segments.
+    The number of subsegments is proportional to the duration of each segment.
+
+    Parameters
+    ----------
+    min_duration : float, optional
+        Defaults to 1.
+    max_duration: float, optional
+        Defaults to 5.
+    """
+
+    def __init__(self, min_duration=1., max_duration=5):
+        super(RandomLabeledSegments, self).__init__()
+        self.min_duration = min_duration
+        self.max_duration = max_duration
+
+    def signature(self):
+        return (
+            {'type': PYANNOTE_SEGMENT,
+             'min_duration': self.min_duration,
+             'max_duration': self.max_duration},
+            {'type': PYANNOTE_LABEL}
+        )
+
+    def from_file(self, current_file):
+        annotation = current_file['annotation']
+        for segment in self.iter_segments(annotation):
+            yield segment
+
+    def iter_segments(self, from_annotation):
+        """
+        Parameters
+        ----------
+        from_annotation : Annotation
+
+        Returns
+        -------
+        segment
+        label
+
+        """
+
+        for segment, _, label in from_annotation.itertracks(label=True):
+
+            # no need to continue if segment is shorter than minimum duration
+            duration = segment.duration
+            if duration < self.min_duration:
+                continue
+
+            # initialize random subsegment generator
+            generator = random_subsegment(segment,
+                                          self.max_duration,
+                                          min_duration=self.min_duration)
+
+            # number of subsegments is proportional
+            # to the duration of the original segment
+            n_subsegments = int(np.ceil(duration / self.min_duration))
+
+            # actual generate random subsegments
+            for _ in range(n_subsegments):
+                s = next(generator)
+                yield (s, label)
+
+
 class RandomSegments(object):
     """Infinitie random segment generator
 
