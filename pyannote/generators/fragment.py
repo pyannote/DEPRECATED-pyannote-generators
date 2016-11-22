@@ -103,17 +103,12 @@ class SlidingSegments(object):
     def __init__(self, duration=3.2, step=0.8, source='annotation'):
         super(SlidingSegments, self).__init__()
 
-        if not duration > 0:
-            raise ValueError('Duration must be strictly positive.')
         self.duration = duration
-
-        if not step > 0:
-            raise ValueError('Step must be strictly positive.')
         self.step = step
-
         self.source = source
 
     def signature(self):
+
         return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
 
     def from_file(self, current_file):
@@ -225,50 +220,79 @@ class SlidingLabeledSegments(object):
     step: float, optional
         Duration and step of sliding window (in seconds).
         Default to 3.2 and 0.8.
+    min_duration: float, optional
+        When provided, will do its best to yield segments of length `duration`,
+        but shortest segments are also permitted (as long as they are longer
+        than `min_duration`).
     """
 
-    def __init__(self, duration=3.2, step=0.8):
+    def __init__(self, duration=3.2, step=0.8,
+                 min_duration=None, source='annotation'):
         super(SlidingLabeledSegments, self).__init__()
 
-        if not duration > 0:
-            raise ValueError('Duration must be strictly positive.')
         self.duration = duration
 
-        if not step > 0:
-            raise ValueError('Step must be strictly positive.')
+        self.variable_length_ = min_duration is not None
+        if self.variable_length_:
+            self.min_duration = min_duration
+        else:
+            self.min_duration = duration
+
         self.step = step
+        self.source = source
 
     def signature(self):
-        return (
-            {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
-            {'type': PYANNOTE_LABEL}
-        )
+
+        if self.variable_length_:
+            return ({'type': PYANNOTE_SEGMENT,
+                     'min_duration': self.min_duration,
+                     'max_duration': self.duration},
+                    {'type': PYANNOTE_LABEL})
+        else:
+            return ({'type': PYANNOTE_SEGMENT, 'duration': self.duration},
+                    {'type': PYANNOTE_LABEL})
 
     def from_file(self, current_file):
-        annotation = current_file['annotation']
-        for segment in self.iter_segments(annotation):
-            yield segment
+
+        annotation = current_file[self.source]
+        if not isinstance(annotation, Annotation):
+            raise NotImplementedError('source must be an Annotation instance.')
+
+        for segment, label in self.iter_segments(annotation):
+            yield segment, label
 
     def iter_segments(self, from_annotation):
-        """
-        Parameters
-        ----------
-        from_annotation : Annotation
-            If `Annotation`, yield running segments within its timeline.
-        """
-
-        if not isinstance(from_annotation, Annotation):
-            raise TypeError('')
 
         for segment, _, label in from_annotation.itertracks(label=True):
-            window = SlidingWindow(duration=self.duration,
-                                   step=self.step,
-                                   start=segment.start,
-                                   end=segment.end)
-            for s in window:
-                # this is needed because window may go beyond segment.end
-                if s in segment:
-                    yield (s, label)
+
+            # skip segments that are too short
+            if segment.duration < self.min_duration:
+                continue
+
+            # yield segments shorter than duration
+            # when variable length segments are allowed
+            elif segment.duration < self.duration:
+                if self.variable_length_:
+                    yield (segment, label)
+
+            # yield sliding segments within current track
+            else:
+                window = SlidingWindow(
+                    duration=self.duration, step=self.step,
+                    start=segment.start, end=segment.end)
+
+                for s in window:
+
+                    # if current window is fully contained by segment
+                    if s in segment:
+                        yield (s, label)
+
+                    # if it is not but variable length segments are allowed
+                    elif self.variable_length_:
+                        candidate = s & segment
+                        if candidate.duration >= self.min_duration:
+                            yield (candidate, label)
+                        break
 
 
 class RandomLabeledSegments(object):
