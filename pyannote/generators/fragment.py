@@ -88,28 +88,46 @@ def remove_short_segment(timeline, shorter_than):
 
 
 class SlidingSegments(object):
-    """Fixed-duration running segment generator
+    """Sliding segment generator
 
     Parameters
     ----------
     duration: float, optional
-        Segment duration. Defaults to 3.2 seconds.
     step: float, optional
-        Step duration. Defaults to 0.8 seconds.
-    source: 'annotated', 'coverage', 'annotation', 'wav'
+        Duration and step of sliding window (in seconds).
+        Default to 3.2 and 0.8.
+    min_duration: float, optional
+        When provided, will do its best to yield segments of length `duration`,
+        but shortest segments are also permitted (as long as they are longer
+        than `min_duration`).
+    source: {'annotated', 'coverage', 'annotation', 'wav'}, optional.
         Defaults to 'annotation'
     """
 
-    def __init__(self, duration=3.2, step=0.8, source='annotation'):
+    def __init__(self, duration=3.2, step=0.8,
+                 min_duration=None, source='annotation'):
         super(SlidingSegments, self).__init__()
 
         self.duration = duration
+
+        self.variable_length_ = min_duration is not None
+        if self.variable_length_:
+            self.min_duration = min_duration
+        else:
+            self.min_duration = duration
+
         self.step = step
         self.source = source
 
     def signature(self):
 
-        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+        if self.variable_length_:
+            return {'type': PYANNOTE_SEGMENT,
+                    'min_duration': self.min_duration,
+                    'max_duration': self.duration}
+        else:
+            return {'type': PYANNOTE_SEGMENT,
+                    'duration': self.duration}
 
     def from_file(self, current_file):
 
@@ -162,22 +180,36 @@ class SlidingSegments(object):
             raise TypeError(
                 'source must be float, Segment, Timeline or Annotation')
 
-        segments = [segment for segment in segments
-                    if segment.duration > self.duration]
-        if not segments:
-            raise ValueError(
-                'Source must contain at least one segment longer '
-                'than requested duration.')
-
         for segment in segments:
-            window = SlidingWindow(duration=self.duration,
-                                   step=self.step,
-                                   start=segment.start,
-                                   end=segment.end)
-            for s in window:
-                # this is needed because window may go beyond segment.end
-                if s in segment:
-                    yield s
+
+            # skip segments that are too short
+            if segment.duration < self.min_duration:
+                continue
+
+            # yield segments shorter than duration
+            # when variable length segments are allowed
+            elif segment.duration < self.duration:
+                if self.variable_length_:
+                    yield segment
+
+            # yield sliding segments within current track
+            else:
+                window = SlidingWindow(
+                    duration=self.duration, step=self.step,
+                    start=segment.start, end=segment.end)
+
+                for s in window:
+
+                    # if current window is fully contained by segment
+                    if s in segment:
+                        yield s
+
+                    # if it is not but variable length segments are allowed
+                    elif self.variable_length_:
+                        candidate = s & segment
+                        if candidate.duration >= self.min_duration:
+                            yield candidate
+                        break
 
 
 class TwinSlidingSegments(SlidingSegments):
