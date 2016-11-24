@@ -1,7 +1,7 @@
-### Version 0.4 (2016-11-22)
+### Version 0.4.1 (2016-11-24)
 
   - feat: add min_duration support to sliding segments generator
-  
+
 ### Version 0.3 (2016-11-16)
 
   - feat: add random_label_index generator
