@@ -38,6 +38,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'pyannote.core >= 0.8',
+        'pyannote.database >= 0.7.1'
     ],
     # versioneer
     version=versioneer.get_version(),
