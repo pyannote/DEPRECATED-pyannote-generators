@@ -142,7 +142,7 @@ class SlidingSegments(object):
 
         elif self.source == 'wav':
             from pyannote.audio.features.utils import get_wav_duration
-            wav = current_file['medium']['wav']
+            wav = current_file['wav']
             source = get_wav_duration(wav)
 
         else:
@@ -229,7 +229,7 @@ class TwinSlidingSegments(SlidingSegments):
     def from_file(self, current_file):
         from pyannote.audio.features.utils import get_wav_duration
 
-        wav = current_file['medium']['wav']
+        wav = current_file['wav']
         duration = get_wav_duration(wav)
 
         for left in self.iter_segments(duration):

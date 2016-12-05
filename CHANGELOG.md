@@ -1,3 +1,8 @@
+### Version 0.4.2 (2016-12-05)
+
+  - setup: switch to pyannote.database 0.7.1
+  - feat: skip files for which preprocessing fails
+
 ### Version 0.4.1 (2016-11-24)
 
   - feat: add min_duration support to sliding segments generator

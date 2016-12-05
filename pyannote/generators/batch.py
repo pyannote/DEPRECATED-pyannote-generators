@@ -27,8 +27,9 @@
 # Hervé BREDIN - http://herve.niderb.fr
 
 
-import numpy as np
+import warnings
 import itertools
+import numpy as np
 from pyannote.core import PYANNOTE_SEGMENT
 from pyannote.core import PYANNOTE_TRACK
 from pyannote.core import PYANNOTE_LABEL
@@ -330,7 +331,13 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
             uri = current_file['uri']
 
-            preprocessed_file = self.preprocess(current_file, identifier=uri)
+            try:
+                preprocessed_file = self.preprocess(
+                    current_file, identifier=uri)
+            except IOError as e:
+                msg = 'Cannot preprocess file "{uri}".'
+                warnings.warn(msg.format(uri=uri))
+                continue
 
             for fragment in self.generator.from_file(preprocessed_file):
 
