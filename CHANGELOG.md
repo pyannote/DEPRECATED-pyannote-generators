@@ -1,3 +1,8 @@
+### Version 0.5 (2016-12-08)
+
+  - feat: add option to 'robustify' FileBasedBatchGenerator
+  - setup: switch to pyannote.database 0.8
+
 ### Version 0.4.2 (2016-12-05)
 
   - setup: switch to pyannote.database 0.7.1
