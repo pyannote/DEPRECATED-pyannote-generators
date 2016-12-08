@@ -280,7 +280,6 @@ class BaseBatchGenerator(object):
 class FileBasedBatchGenerator(BaseBatchGenerator):
     """
 
-
     Parameters
     ----------
     generator :
@@ -300,7 +299,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         for batch in self.__call__(current_file_generator(), infinite=False):
             yield batch
 
-    def __call__(self, file_generator, infinite=False):
+    def __call__(self, file_generator, infinite=False, robust=False):
         """Generate batches by looping over a (possibly infinite) set of files
 
         Parameters
@@ -312,6 +311,9 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         infinite : boolean, optional
             Set to True to loop over the file generator indefinitely.
             Defaults to exhaust the file generator only once, and then stop.
+        robust : boolean, optional
+            Set to True to skip files for which preprocessing fails.
+            Default behavior is to raise an error.
 
         See also
         --------
@@ -334,10 +336,13 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
             try:
                 preprocessed_file = self.preprocess(
                     current_file, identifier=uri)
-            except IOError as e:
-                msg = 'Cannot preprocess file "{uri}".'
-                warnings.warn(msg.format(uri=uri))
-                continue
+            except Exception as e:
+                if robust:
+                    msg = 'Cannot preprocess file "{uri}".'
+                    warnings.warn(msg.format(uri=uri))
+                    continue
+                else:
+                    raise e
 
             for fragment in self.generator.from_file(preprocessed_file):
 
