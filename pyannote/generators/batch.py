@@ -33,6 +33,7 @@ import numpy as np
 from pyannote.core import PYANNOTE_SEGMENT
 from pyannote.core import PYANNOTE_TRACK
 from pyannote.core import PYANNOTE_LABEL
+from pyannote.database.util import get_unique_identifier
 
 
 class InputOutputSignatureMismatch(Exception):
@@ -331,7 +332,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
         for current_file in file_generator:
 
-            uri = current_file['uri']
+            uri = get_unique_identifier(current_file)
 
             try:
                 preprocessed_file = self.preprocess(
