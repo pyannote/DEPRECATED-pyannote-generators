@@ -1,3 +1,8 @@
+### Version 0.6 (2016-12-14)
+
+  - setup: switch to pyannote.database 0.9
+  - improve: use new 'get_unique_identifier' function
+
 ### Version 0.5 (2016-12-08)
 
   - feat: add option to 'robustify' FileBasedBatchGenerator
