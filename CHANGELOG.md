@@ -1,4 +1,4 @@
-### Version 0.6.1 (2016-12-16)
+### Version 0.6.2 (2016-12-16)
 
   - feat: default 'step' to half of 'duration'
 
