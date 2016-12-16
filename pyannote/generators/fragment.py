@@ -95,7 +95,7 @@ class SlidingSegments(object):
     duration: float, optional
     step: float, optional
         Duration and step of sliding window (in seconds).
-        Default to 3.2 and 0.8.
+        Default to 3.2 and half step.
     min_duration: float, optional
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
@@ -116,6 +116,8 @@ class SlidingSegments(object):
         else:
             self.min_duration = duration
 
+        if step is None:
+            step = .5 * duration
         self.step = step
         self.source = source
 
@@ -251,15 +253,14 @@ class SlidingLabeledSegments(object):
     duration: float, optional
     step: float, optional
         Duration and step of sliding window (in seconds).
-        Default to 3.2 and 0.8.
+        Default to 3.2 and half step.
     min_duration: float, optional
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
         than `min_duration`).
     """
 
-    def __init__(self, duration=3.2, step=0.8,
-                 min_duration=None, source='annotation'):
+    def __init__(self, duration=3.2, step=None, min_duration=None):
         super(SlidingLabeledSegments, self).__init__()
 
         self.duration = duration
@@ -270,8 +271,10 @@ class SlidingLabeledSegments(object):
         else:
             self.min_duration = duration
 
+        if step is None:
+            step = .5 * duration
         self.step = step
-        self.source = source
+
 
     def signature(self):
 
