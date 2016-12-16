@@ -1,3 +1,7 @@
+### Version 0.6.1 (2016-12-16)
+
+  - feat: default 'step' to half of 'duration'
+
 ### Version 0.6 (2016-12-14)
 
   - setup: switch to pyannote.database 0.9
