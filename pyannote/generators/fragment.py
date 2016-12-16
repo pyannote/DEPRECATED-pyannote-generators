@@ -260,7 +260,8 @@ class SlidingLabeledSegments(object):
         than `min_duration`).
     """
 
-    def __init__(self, duration=3.2, step=None, min_duration=None):
+    def __init__(self, duration=3.2, step=None, min_duration=None,
+                 source='annotation'):
         super(SlidingLabeledSegments, self).__init__()
 
         self.duration = duration
@@ -275,6 +276,7 @@ class SlidingLabeledSegments(object):
             step = .5 * duration
         self.step = step
 
+        self.source = source
 
     def signature(self):
 
