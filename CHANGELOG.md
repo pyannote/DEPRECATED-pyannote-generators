@@ -1,3 +1,8 @@
+### Version 0.7 (2017-01-11)
+
+  - feat: add support for approximate 'annotated' source
+  - setup: switch to pyannote.database 0.11
+
 ### Version 0.6.2 (2016-12-16)
 
   - feat: default 'step' to half of 'duration'
