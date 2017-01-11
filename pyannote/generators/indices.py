@@ -36,7 +36,7 @@ def random_label_index(y, per_label=3, return_label=False):
     a 'for' loop is worth a thousand words:
 
     >>> y = [1, 1, 2, 1, 3, 3, 3, 1, 1, 1, 2, 2, 2, 4, 4, 3, 3, 4]
-    >>> iterable = random_label_sequence(y, per_label=2)
+    >>> iterable = random_label_index(y, per_label=2)
     >>> for _ in range(10):
     ...     i = next(iterable)
     ...     print i, '==>', y[i]
