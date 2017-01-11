@@ -3,7 +3,7 @@
 
 # The MIT License (MIT)
 
-# Copyright (c) 2016 CNRS
+# Copyright (c) 2016-2017 CNRS
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@
 
 
 import random
+import warnings
 import numpy as np
 
 from pyannote.core import Segment
@@ -37,6 +38,7 @@ from pyannote.core import SlidingWindow
 from pyannote.core import PYANNOTE_SEGMENT
 from pyannote.core import PYANNOTE_TRACK
 from pyannote.core import PYANNOTE_LABEL
+from pyannote.database.util import get_annotated
 
 
 def random_segment(segments, weighted=False):
@@ -119,6 +121,7 @@ class SlidingSegments(object):
         if step is None:
             step = .5 * duration
         self.step = step
+
         self.source = source
 
     def signature(self):
@@ -134,7 +137,7 @@ class SlidingSegments(object):
     def from_file(self, current_file):
 
         if self.source == 'annotated':
-            source = current_file['annotated']
+            source = get_annotated(current_file)
 
         elif self.source == 'annotation':
             source = current_file['annotation']
