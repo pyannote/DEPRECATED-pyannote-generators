@@ -3,7 +3,7 @@
 
 # The MIT License (MIT)
 
-# Copyright (c) 2016 CNRS
+# Copyright (c) 2016-2017 CNRS
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@
 
 
 import random
+import warnings
 import numpy as np
 
 from pyannote.core import Segment
@@ -119,6 +120,7 @@ class SlidingSegments(object):
         if step is None:
             step = .5 * duration
         self.step = step
+
         self.source = source
 
     def signature(self):
@@ -134,7 +136,24 @@ class SlidingSegments(object):
     def from_file(self, current_file):
 
         if self.source == 'annotated':
-            source = current_file['annotated']
+
+            # if protocol provides 'annotated' key, use it
+            if 'annotated' in current_file:
+                source = current_file['annotated']
+
+            # if it does not, but does provide 'wav' key, use wav duration
+            elif 'wav' in current_file:
+                warnings.warn(
+                    'using "wav" source instead of "annotated".')
+                from pyannote.audio.features.utils import get_wav_duration
+                wav = current_file['wav']
+                source = get_wav_duration(wav)
+
+            # in any other situation, use 'annotation' extent.
+            else:
+                warnings.warn(
+                    'using "annotation" extent as source instead of "annotated".')
+                source = current_file['annotation'].get_timeline().extent()
 
         elif self.source == 'annotation':
             source = current_file['annotation']
