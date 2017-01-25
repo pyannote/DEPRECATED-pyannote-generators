@@ -1,3 +1,9 @@
+### Version 0.8 (2017-01-25)
+
+  - feat: add support for heterogeneous segments
+  - setup: switch to pyannote.core 0.11
+  - BREAKING: rename "coverage" source to "support"
+
 ### Version 0.7 (2017-01-11)
 
   - feat: add support for approximate 'annotated' source
