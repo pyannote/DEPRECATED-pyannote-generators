@@ -375,9 +375,27 @@ class SlidingLabeledSegments(object):
             raise ValueError(
                 'annotation contains tracks labeled as "None".')
 
+        if isinstance(support, Annotation):
+            support = support.get_timeline()
+
+        elif isinstance(support, Timeline):
+            pass
+
+        elif isinstance(support, Segment):
+            pass
+
+        elif isinstance(support, (int, float)):
+            if not self.duration > 0:
+                raise ValueError('Duration must be strictly positive.')
+            support = Segment(0, support)
+
+        else:
+            raise TypeError(
+                'source must be float, Segment, Timeline or Annotation')
+
         # fill gaps with tracks labels as None
-        annotation = from_annotation.smooth()
-        gaps = annotation.get_timeline().gaps(focus=support)
+        annotation = from_annotation.support()
+        gaps = annotation.get_timeline().gaps(support=support)
         for gap in gaps:
             annotation[gap] = None
 
