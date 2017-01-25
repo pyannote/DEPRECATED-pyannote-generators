@@ -294,13 +294,26 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         """
         return current_file
 
-    def from_file(self, current_file):
+    def from_file(self, current_file, incomplete=True):
+        """
+
+        Parameters
+        ----------
+        current_file :
+        incomplete : boolean, optional
+            Set to False to not yield final batch if its incomplete (i.e.
+            smaller than requested batch size). Default behavior is to yield
+            incomplete final batch.
+        """
         def current_file_generator():
             yield current_file
-        for batch in self.__call__(current_file_generator(), infinite=False):
+        for batch in self.__call__(current_file_generator(),
+                                   infinite=False,
+                                   incomplete=incomplete):
             yield batch
 
-    def __call__(self, file_generator, infinite=False, robust=False):
+    def __call__(self, file_generator, infinite=False,
+                 robust=False, incomplete=False):
         """Generate batches by looping over a (possibly infinite) set of files
 
         Parameters
@@ -315,6 +328,10 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         robust : boolean, optional
             Set to True to skip files for which preprocessing fails.
             Default behavior is to raise an error.
+        incomplete : boolean, optional
+            Set to True to yield final batch, even if its incomplete (i.e.
+            smaller than requested batch size). Default behavior is to not
+            yield incomplete final batch. Has no effect when infinite is True.
 
         See also
         --------
@@ -357,9 +374,14 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
                     self.batch_ = self._batch_new(signature_out)
                     batch_size = 0
 
-            # variable batch size
+            # mono-batch
             if self.batch_size < 1:
                 batch = self._batch_pack(signature_out)
                 yield self.postprocess(batch)
                 self.batch_ = self._batch_new(signature_out)
                 batch_size = 0
+
+        # yield incomplete final batch
+        if incomplete and self.batch_size > 0 and batch_size < self.batch_size:
+            batch = self._batch_pack(signature_out)
+            yield self.postprocess(batch)

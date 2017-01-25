@@ -1,5 +1,6 @@
-### Version 0.8 (2017-01-25)
+### Version 0.9 (2017-01-25)
 
+  - feat: add "incomplete" option to yield incomplete final batch
   - feat: add support for heterogeneous segments
   - setup: switch to pyannote.core 0.11
   - BREAKING: rename "coverage" source to "support"
