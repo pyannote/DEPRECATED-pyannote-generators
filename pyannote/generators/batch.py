@@ -382,6 +382,6 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
                 batch_size = 0
 
         # yield incomplete final batch
-        if incomplete and self.batch_size > 0 and batch_size < self.batch_size:
+        if batch_size > 0 and batch_size < self.batch_size and incomplete:
             batch = self._batch_pack(signature_out)
             yield self.postprocess(batch)
