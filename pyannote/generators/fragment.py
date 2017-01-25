@@ -85,6 +85,7 @@ def random_subsegment(segment, duration, min_duration=None):
             t = segment.start + random.random() * (segment.duration - rnd_duration)
             yield Segment(t, t + rnd_duration)
 
+
 def remove_short_segment(timeline, shorter_than):
     return Timeline([s for s in timeline if s.duration > shorter_than])
 
@@ -102,7 +103,7 @@ class SlidingSegments(object):
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
         than `min_duration`).
-    source: {'annotated', 'coverage', 'annotation', 'wav'}, optional.
+    source: {'annotated', 'support', 'annotation', 'wav'}, optional.
         Defaults to 'annotation'
     """
 
@@ -142,8 +143,8 @@ class SlidingSegments(object):
         elif self.source == 'annotation':
             source = current_file['annotation']
 
-        elif self.source == 'coverage':
-            source = current_file['annotation'].get_timeline().coverage()
+        elif self.source == 'support':
+            source = current_file['annotation'].get_timeline().support()
 
         elif self.source == 'wav':
             from pyannote.audio.features.utils import get_wav_duration
@@ -151,7 +152,7 @@ class SlidingSegments(object):
             source = get_wav_duration(wav)
 
         else:
-            raise ValueError('source must be one of "annotated", "annotation", "coverage" or "wav"')
+            raise ValueError('source must be one of "annotated", "annotation", "support" or "wav"')
 
         for segment in self.iter_segments(source):
             yield segment
@@ -248,7 +249,7 @@ class TwinSlidingSegments(SlidingSegments):
 class SlidingLabeledSegments(object):
     """(segment, label) tuple generator
 
-    Yields segment using a sliding window over the coverage of the reference.
+    Yields segment using a sliding window over the support of the reference.
     Heterogeneous segments (i.e. containing more than one label) are skipped.
 
     Parameters
@@ -257,29 +258,43 @@ class SlidingLabeledSegments(object):
     step: float, optional
         Duration and step of sliding window (in seconds).
         Default to 3.2 and half step.
+    heterogeneous : bool, optional
+        Defaults to False (only homogeneous segments).
     min_duration: float, optional
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
-        than `min_duration`).
+        than `min_duration`). This parameter has no effect when "heterogeneous"
+        is set to True.
+
     """
 
-    def __init__(self, duration=3.2, step=None, min_duration=None,
-                 source='annotation'):
+    def __init__(self, duration=3.2, step=None, heterogeneous=False,
+                 source='annotation', min_duration=None):
         super(SlidingLabeledSegments, self).__init__()
 
         self.duration = duration
+        if step is None:
+            step = .5 * duration
+        self.step = step
+
+        self.heterogeneous = heterogeneous
+        if self.heterogeneous:
+            if source == 'annotation':
+                raise ValueError(
+                    'source must be one of "annotated", "support", or "wav" '
+                    'when "heterogeneous" is set to True.')
+            if min_duration is not None:
+                warnings.warn(
+                    '"min_duration" has no effect when "homogeneous" is set '
+                    'to True.')
+
+        self.source = source
 
         self.variable_length_ = min_duration is not None
         if self.variable_length_:
             self.min_duration = min_duration
         else:
             self.min_duration = duration
-
-        if step is None:
-            step = .5 * duration
-        self.step = step
-
-        self.source = source
 
     def signature(self):
 
@@ -294,11 +309,31 @@ class SlidingLabeledSegments(object):
 
     def from_file(self, current_file):
 
-        annotation = current_file[self.source]
-        if not isinstance(annotation, Annotation):
-            raise NotImplementedError('source must be an Annotation instance.')
+        from_annotation = current_file['annotation']
 
-        for segment, label in self.iter_segments(annotation):
+        if self.source == 'annotated':
+            source = get_annotated(current_file)
+
+        elif self.source == 'support':
+            source = current_file['annotation'].get_timeline().support()
+
+        elif self.source == 'wav':
+            from pyannote.audio.features.utils import get_wav_duration
+            wav = current_file['wav']
+            source = get_wav_duration(wav)
+
+        else:
+            raise ValueError(
+                'source must be one of "annotated", "annotation", "support" '
+                'or "wav"')
+
+        if self.heterogeneous:
+            generator = self.iter_heterogeneous_segments(from_annotation,
+                                                         source)
+        else:
+            generator = self.iter_segments(from_annotation)
+
+        for segment, label in generator:
             yield segment, label
 
     def iter_segments(self, from_annotation):
@@ -333,6 +368,25 @@ class SlidingLabeledSegments(object):
                         if candidate.duration >= self.min_duration:
                             yield (candidate, label)
                         break
+
+    def iter_heterogeneous_segments(self, from_annotation, support):
+
+        if None in from_annotation.labels():
+            raise ValueError(
+                'annotation contains tracks labeled as "None".')
+
+        # fill gaps with tracks labels as None
+        annotation = from_annotation.smooth()
+        gaps = annotation.get_timeline().gaps(focus=support)
+        for gap in gaps:
+            annotation[gap] = None
+
+        generator = SlidingSegments(duration=self.duration, step=self.step)
+
+        for segment in generator.iter_segments(support):
+            # majority label
+            label = annotation.argmax(support=segment)
+            yield segment, label
 
 
 class RandomLabeledSegments(object):
