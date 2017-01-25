@@ -1,4 +1,4 @@
-### Version 0.9 (2017-01-25)
+### Version 0.9.1 (2017-01-25)
 
   - feat: add "incomplete" option to yield incomplete final batch
   - feat: add support for heterogeneous segments
