@@ -260,6 +260,9 @@ class SlidingLabeledSegments(object):
         Default to 3.2 and half step.
     heterogeneous : bool, optional
         Defaults to False (only homogeneous segments).
+    skip_unlabeled : bool, optional
+        When True, do not yield unlabeled sequences (e.g. non-speech regions).
+        Defaults to also yield unlabeled sequences.
     min_duration: float, optional
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
@@ -268,7 +271,8 @@ class SlidingLabeledSegments(object):
 
     """
 
-    def __init__(self, duration=3.2, step=None, heterogeneous=False,
+    def __init__(self, duration=3.2, step=None,
+                 heterogeneous=False, skip_unlabeled=False,
                  source='annotation', min_duration=None):
         super(SlidingLabeledSegments, self).__init__()
 
@@ -285,9 +289,10 @@ class SlidingLabeledSegments(object):
                     'when "heterogeneous" is set to True.')
             if min_duration is not None:
                 warnings.warn(
-                    '"min_duration" has no effect when "homogeneous" is set '
+                    '"min_duration" has no effect when "heterogeneous" is set '
                     'to True.')
 
+        self.skip_unlabeled = skip_unlabeled
         self.source = source
 
         self.variable_length_ = min_duration is not None
@@ -334,6 +339,8 @@ class SlidingLabeledSegments(object):
             generator = self.iter_segments(from_annotation)
 
         for segment, label in generator:
+            if label is None and self.skip_unlabeled:
+                continue
             yield segment, label
 
     def iter_segments(self, from_annotation):

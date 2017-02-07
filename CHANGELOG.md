@@ -1,3 +1,8 @@
+### Version 0.10 (2017-02-07)
+
+  - feat: add "skip_unlabeled" option to labeled segment generator
+  - setup: switch to pyannote.core 0.13
+
 ### Version 0.9.2 (2017-01-25)
 
   - feat: add "incomplete" option to yield incomplete final batch
