@@ -317,15 +317,18 @@ class SlidingLabeledSegments(object):
         from_annotation = current_file['annotation']
 
         if self.source == 'annotated':
-            source = get_annotated(current_file)
+            support = get_annotated(current_file)
 
         elif self.source == 'support':
-            source = current_file['annotation'].get_timeline().support()
+            support = current_file['annotation'].get_timeline().support()
+
+        elif self.source == 'annotation':
+            support = current_file['annotation']
 
         elif self.source == 'wav':
             from pyannote.audio.features.utils import get_wav_duration
             wav = current_file['wav']
-            source = get_wav_duration(wav)
+            support = get_wav_duration(wav)
 
         else:
             raise ValueError(
@@ -334,7 +337,7 @@ class SlidingLabeledSegments(object):
 
         if self.heterogeneous:
             generator = self.iter_heterogeneous_segments(from_annotation,
-                                                         source)
+                                                         support)
         else:
             generator = self.iter_segments(from_annotation)
 
