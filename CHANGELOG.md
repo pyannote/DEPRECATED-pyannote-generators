@@ -1,3 +1,7 @@
+### Version 0.11 (2017-04-20)
+
+  - feat: add "batchify" utility function
+
 ### Version 0.10 (2017-02-07)
 
   - feat: add "skip_unlabeled" option to labeled segment generator

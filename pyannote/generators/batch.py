@@ -40,6 +40,42 @@ class InputOutputSignatureMismatch(Exception):
     pass
 
 
+def batchify(generator, signature, batch_size=32):
+    """Pack and yield batches out of a generator
+
+    Parameters
+    ----------
+    generator : iterable
+        Generator
+    signature : dict, optional
+        Signature of the generator.
+    batch_size : int, optional
+        Batch size. Defaults to 32.
+
+    Returns
+    -------
+    batch_generator : iterable
+        Batch generator
+    """
+
+    class Generator(object):
+
+        def __iter__(self):
+            return self
+
+        def next(self):
+            return self.__next__()
+
+        def __next__(self):
+            return next(generator)
+
+        def signature(self):
+            return signature
+
+    for batch in BaseBatchGenerator(Generator(), batch_size=batch_size):
+        yield batch
+
+
 class BaseBatchGenerator(object):
     """Base class to pack and yield batches out of a generator
 
