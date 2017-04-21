@@ -253,7 +253,7 @@ class BaseBatchGenerator(object):
             if fragment_type is None:
                 return {key: self._batch_pack(signature_out[key],
                                               batch=batch[key])
-                        for key in signature_out.items()}
+                        for key in signature_out}
             else:
                 pack_func = getattr(self, 'pack_' + fragment_type,
                                     self._passthrough)
@@ -273,7 +273,7 @@ class BaseBatchGenerator(object):
             batch_type = signature.get('type', None)
             if batch_type is None:
                 return {key: self._postprocess(batch[key], signature[key])
-                        for key in signature.items()}
+                        for key in signature}
 
             else:
                 postprocess_func = getattr(self, 'postprocess_' + batch_type,

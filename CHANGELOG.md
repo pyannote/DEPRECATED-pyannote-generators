@@ -1,3 +1,7 @@
+### Version 0.11.1 (2017-04-21)
+
+  - fix: fix batch packing when signature is a dictionary
+
 ### Version 0.11 (2017-04-20)
 
   - feat: add "batchify" utility function
