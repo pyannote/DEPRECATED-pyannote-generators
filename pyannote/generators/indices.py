@@ -31,9 +31,28 @@ import warnings
 import numpy as np
 
 
-def random_label_index(y, per_label=3, return_label=False):
+def random_label_index(y, per_label=3, repeat=True, return_label=False):
     """
-    a 'for' loop is worth a thousand words:
+
+    Parameters
+    ----------
+    y : iterable
+    per_label : int, optional
+        Defaults to 3.
+    repeat : bool, optional
+        Default behavior is to repeat sequences for labels that have less than
+        `per_label` different samples. Set to False to not repeat sequences
+        (side effect is that the generator may yield less than `per_label`
+        samples for some labels.
+    return_label : bool, optional
+        Default behavior is to only yield sequence indices. Set to True to
+        yield (indice, label) tuples.
+
+    Usage
+    -----
+
+    "A 'for' loop is worth a thousand images"
+    (anonymous 21st century poet)
 
     >>> y = [1, 1, 2, 1, 3, 3, 3, 1, 1, 1, 2, 2, 2, 4, 4, 3, 3, 4]
     >>> iterable = random_label_index(y, per_label=2)
@@ -64,7 +83,10 @@ def random_label_index(y, per_label=3, return_label=False):
                                  N=n_labels,
                                  per_label=per_label))
 
+    # shuffled_sequences[label] contains (shuffled) sequences with this label
     shuffled_sequences = [np.where(y == label)[0] for label in range(n_labels)]
+
+    # consumed[label] keeps track of the number of sequences consumed
     consumed = [0 for label in range(n_labels)]
 
     # infinite loop
@@ -73,9 +95,12 @@ def random_label_index(y, per_label=3, return_label=False):
         # consume all labels in random order
         for label in np.random.choice(n_labels, size=n_labels, replace=False):
 
+            per_this_label = per_label if repeat \
+                else min(per_label, counts[label])
+
             # consume 'per_label' sequences from current label
             # using pre-shuffled order
-            for _ in range(per_label):
+            for _ in range(per_this_label):
 
                 i = shuffled_sequences[label][consumed[label]]
                 if return_label:
