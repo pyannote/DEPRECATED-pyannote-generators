@@ -222,17 +222,17 @@ class BaseBatchGenerator(object):
                                              **kwargs)
                     self._batch_add(processed, None, signature_out, batch=batch)
 
-    def pack_sequence(self, batch):
-        return np.stack(batch)
+    def pack_ndarray(self, ndarrays):
+        return np.stack(ndarrays)
 
-    def pack_batch(self, batch):
-        return np.stack(batch)
+    def pack_batch(self, batches):
+        try:
+            return np.stack(batches)
+        except ValueError as e:
+            return np.vstack(batches)
 
-    def pack_boolean(self, batch):
-        return np.array(batch)
-
-    def pack_timestamp(self, batch):
-        return np.array(batch)
+    def pack_scalar(self, scalars):
+        return np.array(scalars)
 
     def _batch_pack(self, signature_out, batch=None):
 

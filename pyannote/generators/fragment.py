@@ -35,9 +35,6 @@ from pyannote.core import Segment
 from pyannote.core import Timeline
 from pyannote.core import Annotation
 from pyannote.core import SlidingWindow
-from pyannote.core import PYANNOTE_SEGMENT
-from pyannote.core import PYANNOTE_TRACK
-from pyannote.core import PYANNOTE_LABEL
 from pyannote.database.util import get_annotated
 
 
@@ -128,11 +125,11 @@ class SlidingSegments(object):
     def signature(self):
 
         if self.variable_length_:
-            return {'type': PYANNOTE_SEGMENT,
+            return {'type': 'segment',
                     'min_duration': self.min_duration,
                     'max_duration': self.duration}
         else:
-            return {'type': PYANNOTE_SEGMENT,
+            return {'type': 'segment',
                     'duration': self.duration}
 
     def from_file(self, current_file):
@@ -227,9 +224,9 @@ class TwinSlidingSegments(SlidingSegments):
 
     def signature(self):
         return (
-            {'type': 'timestamp'},
-            {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
-            {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+            {'type': 'scalar'},
+            {'type': 'segment', 'duration': self.duration},
+            {'type': 'segment', 'duration': self.duration}
         )
 
     def from_file(self, current_file):
@@ -304,13 +301,13 @@ class SlidingLabeledSegments(object):
     def signature(self):
 
         if self.variable_length_:
-            return ({'type': PYANNOTE_SEGMENT,
+            return ({'type': 'segment',
                      'min_duration': self.min_duration,
                      'max_duration': self.duration},
-                    {'type': PYANNOTE_LABEL})
+                    {'type': 'label'})
         else:
-            return ({'type': PYANNOTE_SEGMENT, 'duration': self.duration},
-                    {'type': PYANNOTE_LABEL})
+            return ({'type': 'segment', 'duration': self.duration},
+                    {'type': 'label'})
 
     def from_file(self, current_file):
 
@@ -438,10 +435,10 @@ class RandomLabeledSegments(object):
 
     def signature(self):
         return (
-            {'type': PYANNOTE_SEGMENT,
+            {'type': 'segment',
              'min_duration': self.min_duration,
              'max_duration': self.max_duration},
-            {'type': PYANNOTE_LABEL}
+            {'type': 'label'}
         )
 
     def from_file(self, current_file):
@@ -502,7 +499,7 @@ class RandomSegments(object):
         self.weighted = weighted
 
     def signature(self):
-        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+        return {'type': 'segment', 'duration': self.duration}
 
     def pick(self, segment):
         """Pick a subsegment at random"""
@@ -585,10 +582,10 @@ class RandomSegmentsPerLabel(object):
     def signature(self):
         if self.yield_label:
             return (
-                {'type': PYANNOTE_SEGMENT, 'duration': self.duration},
-                {'type': PYANNOTE_LABEL}
+                {'type': 'segment', 'duration': self.duration},
+                {'type': 'label'}
             )
-        return {'type': PYANNOTE_SEGMENT, 'duration': self.duration}
+        return {'type': 'segment', 'duration': self.duration}
 
     def from_file(self, current_file):
         annotation = current_file['annotation']
@@ -635,11 +632,11 @@ class RandomTracks(object):
 
     def signature(self):
         signature = [
-            {'type': PYANNOTE_SEGMENT, 'duration': 0.0},
-            {'type': PYANNOTE_TRACK}
+            {'type': 'segment', 'duration': 0.0},
+            {'type': 'track'}
         ]
         if self.yield_label:
-            signature.append({'type': PYANNOTE_LABEL})
+            signature.append({'type': 'label'})
         return signature
 
     def from_file(self, current_file):
@@ -746,10 +743,10 @@ class RandomSegmentTriplets(object):
 
     def signature(self):
         if self.yield_label:
-            return 3 * [{'type': PYANNOTE_SEGMENT, 'duration': self.duration},
+            return 3 * [{'type': 'segment', 'duration': self.duration},
                         {'type': 'label'}]
         else:
-            return 3 * [{'type': PYANNOTE_SEGMENT, 'duration': self.duration}]
+            return 3 * [{'type': 'segment', 'duration': self.duration}]
 
     def pick(self, segment):
         """Pick a subsegment at random"""
@@ -830,7 +827,7 @@ class RandomSegmentPairs(object):
                                   per_label=self.per_label,
                                   yield_label=self.yield_label)
         signature = t.signature()
-        return [(signature[0], signature[0]), {'type': 'boolean'}]
+        return [(signature[0], signature[0]), {'type': 'scalar'}]
 
     def from_file(self, current_file):
         annotation = current_file['annotation']
