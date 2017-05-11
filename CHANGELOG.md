@@ -1,3 +1,9 @@
+### Version 0.12 (2017-05-11)
+
+  - chore: reduce BaseBatchGenerator set of pack_xxxx methods
+  - feat: add "repeat" option to "random_label_index"
+  - setup: switch to pyanote.core 0.13.2
+
 ### Version 0.11.1 (2017-04-21)
 
   - fix: fix batch packing when signature is a dictionary
