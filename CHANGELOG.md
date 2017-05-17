@@ -1,3 +1,7 @@
+### Version 0.12.1 (2017-05-17)
+
+  - fix: fix corner case in "random_label_index"
+
 ### Version 0.12 (2017-05-11)
 
   - chore: reduce BaseBatchGenerator set of pack_xxxx methods

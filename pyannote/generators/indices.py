@@ -89,11 +89,20 @@ def random_label_index(y, per_label=3, repeat=True, return_label=False):
     # consumed[label] keeps track of the number of sequences consumed
     consumed = [0 for label in range(n_labels)]
 
+    previous_label = None
+
     # infinite loop
     while True:
 
         # consume all labels in random order
-        for label in np.random.choice(n_labels, size=n_labels, replace=False):
+        for k, label in enumerate(np.random.choice(n_labels,
+                                                   size=n_labels,
+                                                   replace=False)):
+
+            # corner case where last label of previous loop
+            # is the same as first label of current loop
+            if k == 0 and label == previous_label:
+                continue
 
             per_this_label = per_label if repeat \
                 else min(per_label, counts[label])
@@ -115,3 +124,5 @@ def random_label_index(y, per_label=3, repeat=True, return_label=False):
                 if consumed[label] + 1 > counts[label]:
                     consumed[label] = 0
                     np.random.shuffle(shuffled_sequences[label])
+
+        previous_label = label
