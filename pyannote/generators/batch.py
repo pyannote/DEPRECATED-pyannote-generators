@@ -40,7 +40,7 @@ class InputOutputSignatureMismatch(Exception):
     pass
 
 
-def batchify(generator, signature, batch_size=32):
+def batchify(generator, signature, batch_size=32, incomplete=False):
     """Pack and yield batches out of a generator
 
     Parameters
@@ -51,6 +51,10 @@ def batchify(generator, signature, batch_size=32):
         Signature of the generator.
     batch_size : int, optional
         Batch size. Defaults to 32.
+    incomplete : boolean, optional
+        Set to True to yield final batch, even if it is incomplete (i.e.
+        smaller than requested batch size). Default behavior is to not
+        yield incomplete final batch.
 
     Returns
     -------
@@ -72,7 +76,9 @@ def batchify(generator, signature, batch_size=32):
         def signature(self):
             return signature
 
-    for batch in BaseBatchGenerator(Generator(), batch_size=batch_size):
+    for batch in BaseBatchGenerator(Generator(),
+                                    batch_size=batch_size,
+                                    incomplete=incomplete):
         yield batch
 
 
@@ -85,11 +91,17 @@ class BaseBatchGenerator(object):
         Internal generator from which batches are packed
     batch_size : int, optional
         Defaults to 32.
+    incomplete : boolean, optional
+        Set to True to yield final batch, even if it is incomplete (i.e.
+        smaller than requested batch size). Default behavior is to not
+        yield incomplete final batch.
+
     """
-    def __init__(self, generator, batch_size=32):
+    def __init__(self, generator, batch_size=32, incomplete=False):
         super(BaseBatchGenerator, self).__init__()
         self.generator = generator
         self.batch_size = batch_size
+        self.incomplete = incomplete
         self.batch_generator_ = self.iter_batches()
 
         signature_in = self.generator.signature()
@@ -312,6 +324,11 @@ class BaseBatchGenerator(object):
                 yield self.postprocess(batch)
                 self.batch_ = self._batch_new(signature_out)
                 batch_size = 0
+
+        # yield last incomplete batch
+        if batch_size > 0 and self.incomplete:
+            batch = self._batch_pack(signature_out)
+            yield self.postprocess(batch)
 
 
 class FileBasedBatchGenerator(BaseBatchGenerator):
