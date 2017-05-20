@@ -1,3 +1,7 @@
+### Version 0.13 (2017-05-20)
+
+  - feat: add option to yield incomplete final batch
+
 ### Version 0.12.1 (2017-05-17)
 
   - fix: fix corner case in "random_label_index"
