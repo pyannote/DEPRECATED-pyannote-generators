@@ -100,7 +100,7 @@ class SlidingSegments(object):
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
         than `min_duration`).
-    source: {'annotated', 'support', 'annotation', 'wav'}, optional.
+    source: {'annotated', 'support', 'annotation', 'audio'}, optional.
         Defaults to 'annotation'
     """
 
@@ -143,13 +143,12 @@ class SlidingSegments(object):
         elif self.source == 'support':
             source = current_file['annotation'].get_timeline().support()
 
-        elif self.source == 'wav':
-            from pyannote.audio.features.utils import get_wav_duration
-            wav = current_file['wav']
-            source = get_wav_duration(wav)
+        elif self.source == 'audio':
+            from pyannote.audio.features.utils import get_audio_duration
+            source = get_audio_duration(current_file)
 
         else:
-            raise ValueError('source must be one of "annotated", "annotation", "support" or "wav"')
+            raise ValueError('source must be one of "annotated", "annotation", "support" or "audio"')
 
         for segment in self.iter_segments(source):
             yield segment
@@ -219,7 +218,7 @@ class TwinSlidingSegments(SlidingSegments):
 
     def __init__(self, duration=3.2, step=0.8, gap=0.0):
         super(TwinSlidingSegments, self).__init__(
-            duration=duration, step=step, source='wav')
+            duration=duration, step=step, source='audio')
         self.gap = gap
 
     def signature(self):
@@ -230,10 +229,9 @@ class TwinSlidingSegments(SlidingSegments):
         )
 
     def from_file(self, current_file):
-        from pyannote.audio.features.utils import get_wav_duration
+        from pyannote.audio.features.utils import get_audio_duration
 
-        wav = current_file['wav']
-        duration = get_wav_duration(wav)
+        duration = get_audio_duration(current_file)
 
         for left in self.iter_segments(duration):
             right = Segment(left.end + self.gap,
@@ -282,7 +280,7 @@ class SlidingLabeledSegments(object):
         if self.heterogeneous:
             if source == 'annotation':
                 raise ValueError(
-                    'source must be one of "annotated", "support", or "wav" '
+                    'source must be one of "annotated", "support", or "audio" '
                     'when "heterogeneous" is set to True.')
             if min_duration is not None:
                 warnings.warn(
@@ -322,15 +320,14 @@ class SlidingLabeledSegments(object):
         elif self.source == 'annotation':
             support = current_file['annotation']
 
-        elif self.source == 'wav':
-            from pyannote.audio.features.utils import get_wav_duration
-            wav = current_file['wav']
-            support = get_wav_duration(wav)
+        elif self.source == 'audio':
+            from pyannote.audio.features.utils import get_audio_duration
+            support = get_audio_duration(current_file)
 
         else:
             raise ValueError(
                 'source must be one of "annotated", "annotation", "support" '
-                'or "wav"')
+                'or "audio"')
 
         if self.heterogeneous:
             generator = self.iter_heterogeneous_segments(from_annotation,
