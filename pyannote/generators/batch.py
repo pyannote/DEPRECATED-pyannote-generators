@@ -28,7 +28,6 @@
 
 
 import warnings
-import itertools
 import numpy as np
 import random
 from pyannote.database.util import get_unique_identifier
@@ -391,7 +390,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
             key (uri = uniform resource identifier). Typically, one would use
             the 'train' method of a protocol available in pyannote.database.
         infinite : boolean, optional
-            Set to True to loop over the file generator indefinitely.
+            Loop over the file generator indefinitely, in random order.
             Defaults to exhaust the file generator only once, and then stop.
         robust : boolean, optional
             Set to True to skip files for which preprocessing fails.
@@ -413,7 +412,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         self.batch_ = self._batch_new(signature_out)
 
         if infinite:
-            file_generator = itertools.cycle(file_generator)
+            file_generator = forever(file_generator, shuffle=True)
 
         for current_file in file_generator:
 
