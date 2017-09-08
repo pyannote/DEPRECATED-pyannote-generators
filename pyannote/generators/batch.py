@@ -3,7 +3,7 @@
 
 # The MIT License (MIT)
 
-# Copyright (c) 2016 CNRS
+# Copyright (c) 2016-2017 CNRS
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +28,8 @@
 
 
 import warnings
-import itertools
 import numpy as np
-from pyannote.core import PYANNOTE_SEGMENT
-from pyannote.core import PYANNOTE_TRACK
-from pyannote.core import PYANNOTE_LABEL
+import random
 from pyannote.database.util import get_unique_identifier
 
 
@@ -331,6 +328,23 @@ class BaseBatchGenerator(object):
             yield self.postprocess(batch)
 
 
+def forever(iterable, shuffle=False):
+    """Loop over the iterable indefinitely.
+
+    Parameters
+    ----------
+    iterable : iterable
+    shuffle : bool, optional
+        Shuffle iterable after each full consumption
+    """
+    saved = list(iterable)
+    while saved:
+        if shuffle:
+            random.shuffle(saved)
+        for element in saved:
+              yield element
+
+
 class FileBasedBatchGenerator(BaseBatchGenerator):
     """
 
@@ -376,7 +390,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
             key (uri = uniform resource identifier). Typically, one would use
             the 'train' method of a protocol available in pyannote.database.
         infinite : boolean, optional
-            Set to True to loop over the file generator indefinitely.
+            Loop over the file generator indefinitely, in random order.
             Defaults to exhaust the file generator only once, and then stop.
         robust : boolean, optional
             Set to True to skip files for which preprocessing fails.
@@ -398,7 +412,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         self.batch_ = self._batch_new(signature_out)
 
         if infinite:
-            file_generator = itertools.cycle(file_generator)
+            file_generator = forever(file_generator, shuffle=True)
 
         for current_file in file_generator:
 
