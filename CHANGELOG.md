@@ -1,3 +1,9 @@
+### Version 0.14 (2017-09-08)
+
+  - BREAKING: rename "wav" source to "audio"
+  - improve: shuffle files in inifinite FileBasedBatchGenerator
+  - setup: switch to pyannote.core 1.0 and pyannote.database 0.12
+
 ### Version 0.13 (2017-05-20)
 
   - feat: add option to yield incomplete final batch
