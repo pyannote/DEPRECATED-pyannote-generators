@@ -30,9 +30,6 @@
 import warnings
 import itertools
 import numpy as np
-from pyannote.core import PYANNOTE_SEGMENT
-from pyannote.core import PYANNOTE_TRACK
-from pyannote.core import PYANNOTE_LABEL
 import random
 from pyannote.database.util import get_unique_identifier
 
