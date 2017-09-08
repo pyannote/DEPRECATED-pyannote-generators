@@ -3,7 +3,7 @@
 
 # The MIT License (MIT)
 
-# Copyright (c) 2016 CNRS
+# Copyright (c) 2016-2017 CNRS
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ import numpy as np
 from pyannote.core import PYANNOTE_SEGMENT
 from pyannote.core import PYANNOTE_TRACK
 from pyannote.core import PYANNOTE_LABEL
+import random
 from pyannote.database.util import get_unique_identifier
 
 
@@ -329,6 +330,23 @@ class BaseBatchGenerator(object):
         if batch_size > 0 and self.incomplete:
             batch = self._batch_pack(signature_out)
             yield self.postprocess(batch)
+
+
+def forever(iterable, shuffle=False):
+    """Loop over the iterable indefinitely.
+
+    Parameters
+    ----------
+    iterable : iterable
+    shuffle : bool, optional
+        Shuffle iterable after each full consumption
+    """
+    saved = list(iterable)
+    while saved:
+        if shuffle:
+            random.shuffle(saved)
+        for element in saved:
+              yield element
 
 
 class FileBasedBatchGenerator(BaseBatchGenerator):
