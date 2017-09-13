@@ -104,7 +104,7 @@ class SlidingSegments(object):
         Defaults to 'annotation'
     """
 
-    def __init__(self, duration=3.2, step=0.8,
+    def __init__(self, duration=3.2, step=None,
                  min_duration=None, source='annotation'):
         super(SlidingSegments, self).__init__()
 
