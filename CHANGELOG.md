@@ -1,3 +1,9 @@
+### Version 0.15 (2017-09-28)
+
+  - feat: add 'annotated_extent' source to SlidingSegments
+  - fix: fix default step value in SlidingSegments
+  - setup: switch to pyannote.core 1.1
+
 ### Version 0.14 (2017-09-08)
 
   - BREAKING: rename "wav" source to "audio"
