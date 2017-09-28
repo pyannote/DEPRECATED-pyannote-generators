@@ -100,11 +100,11 @@ class SlidingSegments(object):
         When provided, will do its best to yield segments of length `duration`,
         but shortest segments are also permitted (as long as they are longer
         than `min_duration`).
-    source: {'annotated', 'support', 'annotation', 'audio'}, optional.
+    source: {'annotated', 'annotated_extent', 'support', 'annotation', 'audio'}, optional.
         Defaults to 'annotation'
     """
 
-    def __init__(self, duration=3.2, step=0.8,
+    def __init__(self, duration=3.2, step=None,
                  min_duration=None, source='annotation'):
         super(SlidingSegments, self).__init__()
 
@@ -137,6 +137,9 @@ class SlidingSegments(object):
         if self.source == 'annotated':
             source = get_annotated(current_file)
 
+        elif self.source == 'annotated_extent':
+            source = get_annotated(current_file).extent()
+
         elif self.source == 'annotation':
             source = current_file['annotation']
 
@@ -148,7 +151,7 @@ class SlidingSegments(object):
             source = get_audio_duration(current_file)
 
         else:
-            raise ValueError('source must be one of "annotated", "annotation", "support" or "audio"')
+            raise ValueError('source must be one of "annotated", "annotated_extent", "annotation", "support" or "audio"')
 
         for segment in self.iter_segments(source):
             yield segment
