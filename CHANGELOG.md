@@ -1,3 +1,8 @@
+### Version 0.16 (2018-01-23)
+
+  - feat: drop support for Python 2
+  - feat: add support for variable batch size
+
 ### Version 0.15 (2017-09-28)
 
   - feat: add 'annotated_extent' source to SlidingSegments
