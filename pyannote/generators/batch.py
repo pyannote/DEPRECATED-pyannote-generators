@@ -3,7 +3,7 @@
 
 # The MIT License (MIT)
 
-# Copyright (c) 2016-2017 CNRS
+# Copyright (c) 2016-2018 CNRS
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,17 @@ import warnings
 import numpy as np
 import random
 from pyannote.database.util import get_unique_identifier
+
+
+class Singleton(type):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+class EndOfBatch(metaclass=Singleton):
+    pass
 
 
 class InputOutputSignatureMismatch(Exception):
@@ -303,24 +314,33 @@ class BaseBatchGenerator(object):
 
     def iter_batches(self):
 
+        endOfBatch = EndOfBatch()
+
         signature_in = self.generator.signature()
         signature_out = self.signature()
 
         batch_size = 0
+        complete = False
 
         self.batch_ = self._batch_new(signature_out)
 
         for fragment in self.generator:
 
-            self._batch_add(fragment, signature_in, signature_out)
-            batch_size += 1
+            if fragment == endOfBatch:
+                complete = True
+            else:
+                self._batch_add(fragment, signature_in, signature_out)
+                batch_size += 1
 
-            # fixed batch size
-            if self.batch_size > 0 and batch_size == self.batch_size:
-                batch = self._batch_pack(signature_out)
-                yield self.postprocess(batch)
+            complete |= self.batch_size > 0 and batch_size == self.batch_size
+
+            if complete:
+                if batch_size:
+                    batch = self._batch_pack(signature_out)
+                    yield self.postprocess(batch)
                 self.batch_ = self._batch_new(signature_out)
                 batch_size = 0
+                complete = False
 
         # yield last incomplete batch
         if batch_size > 0 and self.incomplete:
