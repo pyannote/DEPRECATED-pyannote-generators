@@ -31,6 +31,7 @@ import warnings
 import numpy as np
 import random
 from pyannote.database.util import get_unique_identifier
+from .background import BackgroundGenerator
 
 
 class Singleton(type):
@@ -48,7 +49,8 @@ class InputOutputSignatureMismatch(Exception):
     pass
 
 
-def batchify(generator, signature, batch_size=32, incomplete=False):
+def batchify(generator, signature, batch_size=32,
+             incomplete=False, prefetch=0):
     """Pack and yield batches out of a generator
 
     Parameters
@@ -63,6 +65,10 @@ def batchify(generator, signature, batch_size=32, incomplete=False):
         Set to True to yield final batch, even if it is incomplete (i.e.
         smaller than requested batch size). Default behavior is to not
         yield incomplete final batch.
+    prefetch : int, optional
+        Prefetch that many batches in a background thread.
+        Defaults to not prefetch anything.
+
 
     Returns
     -------
@@ -84,9 +90,13 @@ def batchify(generator, signature, batch_size=32, incomplete=False):
         def signature(self):
             return signature
 
-    for batch in BaseBatchGenerator(Generator(),
-                                    batch_size=batch_size,
-                                    incomplete=incomplete):
+    batches = BaseBatchGenerator(
+        Generator(), batch_size=batch_size, incomplete=incomplete)
+
+    if prefetch:
+        batches = BackgroundGenerator(batches, max_prefetch=prefetch)
+
+    for batch in batches:
         yield batch
 
 
@@ -103,7 +113,6 @@ class BaseBatchGenerator(object):
         Set to True to yield final batch, even if it is incomplete (i.e.
         smaller than requested batch size). Default behavior is to not
         yield incomplete final batch.
-
     """
     def __init__(self, generator, batch_size=32, incomplete=False):
         super(BaseBatchGenerator, self).__init__()
