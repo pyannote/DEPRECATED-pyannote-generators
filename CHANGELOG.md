@@ -1,3 +1,7 @@
+### Version 0.17 (2018-25-01)
+
+  - feat: add support for threaded background generators
+
 ### Version 0.16 (2018-01-23)
 
   - feat: drop support for Python 2
