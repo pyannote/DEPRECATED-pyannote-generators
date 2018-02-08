@@ -1,3 +1,7 @@
+### Version 0.17.1 (2018-02-08)
+
+  - fix: fix EndOfBatch behavior with ndarrays
+
 ### Version 0.17 (2018-25-01)
 
   - feat: add support for threaded background generators
