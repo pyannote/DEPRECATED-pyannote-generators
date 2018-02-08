@@ -335,7 +335,7 @@ class BaseBatchGenerator(object):
 
         for fragment in self.generator:
 
-            if fragment == endOfBatch:
+            if fragment is endOfBatch:
                 complete = True
             else:
                 self._batch_add(fragment, signature_in, signature_out)
