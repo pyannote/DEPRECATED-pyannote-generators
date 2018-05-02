@@ -263,26 +263,26 @@ class BaseBatchGenerator(object):
     def pack_scalar(self, scalars):
         return np.array(scalars)
 
-    def _batch_pack(self, signature_out, batch=None):
+    def _batch_pack(self, signature_in, batch=None):
 
         if batch is None:
             batch = self.batch_
 
-        if type(signature_out) == list:
-            return list(self._batch_pack(_signature_out, batch=_batch)
-                        for _signature_out, _batch in zip(signature_out, batch))
+        if type(signature_in) == list:
+            return list(self._batch_pack(_signature_in, batch=_batch)
+                        for _signature_in, _batch in zip(signature_in, batch))
 
-        elif type(signature_out) == tuple:
-            return tuple(self._batch_pack(_signature_out, batch=_batch)
-                          for _signature_out, _batch in zip(signature_out, batch))
+        elif type(signature_in) == tuple:
+            return tuple(self._batch_pack(_signature_in, batch=_batch)
+                          for _signature_in, _batch in zip(signature_in, batch))
 
-        elif type(signature_out) == dict:
-            fragment_type = signature_out.get('type', None)
+        elif type(signature_in) == dict:
+            fragment_type = signature_in.get('type', None)
 
             if fragment_type is None:
-                return {key: self._batch_pack(signature_out[key],
+                return {key: self._batch_pack(signature_in[key],
                                               batch=batch[key])
-                        for key in signature_out}
+                        for key in signature_in}
             else:
                 pack_func = getattr(self, 'pack_' + fragment_type,
                                     self._passthrough)
@@ -345,7 +345,7 @@ class BaseBatchGenerator(object):
 
             if complete:
                 if batch_size:
-                    batch = self._batch_pack(signature_out)
+                    batch = self._batch_pack(signature_in)
                     yield self.postprocess(batch)
                 self.batch_ = self._batch_new(signature_out)
                 batch_size = 0
@@ -353,7 +353,7 @@ class BaseBatchGenerator(object):
 
         # yield last incomplete batch
         if batch_size > 0 and self.incomplete:
-            batch = self._batch_pack(signature_out)
+            batch = self._batch_pack(signature_in)
             yield self.postprocess(batch)
 
 
@@ -465,19 +465,19 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
                 # fixed batch size
                 if self.batch_size > 0 and batch_size == self.batch_size:
-                    batch = self._batch_pack(signature_out)
+                    batch = self._batch_pack(signature_in)
                     yield self.postprocess(batch)
                     self.batch_ = self._batch_new(signature_out)
                     batch_size = 0
 
             # mono-batch
             if self.batch_size < 1:
-                batch = self._batch_pack(signature_out)
+                batch = self._batch_pack(signature_in)
                 yield self.postprocess(batch)
                 self.batch_ = self._batch_new(signature_out)
                 batch_size = 0
 
         # yield incomplete final batch
         if batch_size > 0 and batch_size < self.batch_size and incomplete:
-            batch = self._batch_pack(signature_out)
+            batch = self._batch_pack(signature_in)
             yield self.postprocess(batch)

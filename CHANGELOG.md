@@ -1,3 +1,7 @@
+### Version 0.17.2 (2018-05-02)
+
+  - fix: make batch packing use input signature
+
 ### Version 0.17.1 (2018-02-08)
 
   - fix: fix EndOfBatch behavior with ndarrays
