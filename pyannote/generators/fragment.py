@@ -155,7 +155,9 @@ class SlidingSegments(object):
             source = self.source
 
         else:
-            raise ValueError('source must be one of "annotated", "annotated_extent", "annotation", "support" or "audio"')
+            msg = ('source must be one of "annotated", "annotated_extent", '
+                   '"annotation", "support", or "audio".')
+            raise ValueError(msg)
 
         for segment in self.iter_segments(source):
             yield segment
