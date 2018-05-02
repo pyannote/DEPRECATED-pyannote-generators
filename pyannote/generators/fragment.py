@@ -150,6 +150,10 @@ class SlidingSegments(object):
             from pyannote.audio.features.utils import get_audio_duration
             source = get_audio_duration(current_file)
 
+        # not documented: use a segment instance directly
+        elif isinstance(self.source, Segment):
+            source = self.source
+
         else:
             raise ValueError('source must be one of "annotated", "annotated_extent", "annotation", "support" or "audio"')
 
