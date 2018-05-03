@@ -249,7 +249,8 @@ class BaseBatchGenerator(object):
                                            self._passthrough)
                     processed = process_func(fragment, signature=signature_in,
                                              **kwargs)
-                    self._batch_add(processed, None, signature_out, batch=batch)
+                    self._batch_add(processed, None, signature_out,
+                                    batch=batch, **kwargs)
 
     def pack_ndarray(self, ndarrays):
         return np.stack(ndarrays)
