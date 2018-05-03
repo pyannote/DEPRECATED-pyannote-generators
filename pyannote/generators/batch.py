@@ -290,6 +290,18 @@ class BaseBatchGenerator(object):
                 return pack_func(batch)
 
     def _postprocess(self, batch, signature):
+        """Recursively post-process batch after it has been packed
+
+        Parameters
+        ----------
+        batch :
+        signature :
+
+        Returns
+        -------
+        postprocessed_batch :
+
+        """
 
         if type(signature) == list:
             return [self._postprocess(_batch, _signature)
@@ -311,6 +323,7 @@ class BaseBatchGenerator(object):
                 return postprocess_func(batch)
 
     def postprocess(self, batch):
+        """Post-process batch after it has been packed"""
         return self._postprocess(batch, self.signature())
 
     def __iter__(self):
