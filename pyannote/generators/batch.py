@@ -397,8 +397,7 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         Must implement generator.from_file
     """
 
-    # identifier is useful for thread-safe current_file dependent preprocessing
-    def preprocess(self, current_file, identifier=None, **kwargs):
+    def preprocess(self, current_file, **kwargs):
         """Returns pre-processed current_file
         (and optionally set internal state)
         """
@@ -459,13 +458,11 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
         for current_file in file_generator:
 
-            uri = get_unique_identifier(current_file)
-
             try:
-                preprocessed_file = self.preprocess(
-                    current_file, identifier=uri)
+                preprocessed_file = self.preprocess(current_file)
             except Exception as e:
                 if robust:
+                    uri = get_unique_identifier(current_file)
                     msg = 'Cannot preprocess file "{uri}".'
                     warnings.warn(msg.format(uri=uri))
                     continue
@@ -474,7 +471,8 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
             for fragment in self.generator.from_file(preprocessed_file):
 
-                self._batch_add(fragment, signature_in, signature_out, identifier=uri)
+                self._batch_add(fragment, signature_in, signature_out,
+                                current_file=preprocessed_file)
                 batch_size += 1
 
                 # fixed batch size
