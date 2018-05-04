@@ -122,16 +122,6 @@ class SlidingSegments(object):
 
         self.source = source
 
-    def signature(self):
-
-        if self.variable_length_:
-            return {'type': 'segment',
-                    'min_duration': self.min_duration,
-                    'max_duration': self.duration}
-        else:
-            return {'type': 'segment',
-                    'duration': self.duration}
-
     def from_file(self, current_file):
 
         if self.source == 'annotated':
@@ -230,13 +220,6 @@ class TwinSlidingSegments(SlidingSegments):
             duration=duration, step=step, source='audio')
         self.gap = gap
 
-    def signature(self):
-        return (
-            {'type': 'scalar'},
-            {'type': 'segment', 'duration': self.duration},
-            {'type': 'segment', 'duration': self.duration}
-        )
-
     def from_file(self, current_file):
         from pyannote.audio.features.utils import get_audio_duration
 
@@ -304,17 +287,6 @@ class SlidingLabeledSegments(object):
             self.min_duration = min_duration
         else:
             self.min_duration = duration
-
-    def signature(self):
-
-        if self.variable_length_:
-            return ({'type': 'segment',
-                     'min_duration': self.min_duration,
-                     'max_duration': self.duration},
-                    {'type': 'label'})
-        else:
-            return ({'type': 'segment', 'duration': self.duration},
-                    {'type': 'label'})
 
     def from_file(self, current_file):
 
@@ -439,14 +411,6 @@ class RandomLabeledSegments(object):
         self.min_duration = min_duration
         self.max_duration = max_duration
 
-    def signature(self):
-        return (
-            {'type': 'segment',
-             'min_duration': self.min_duration,
-             'max_duration': self.max_duration},
-            {'type': 'label'}
-        )
-
     def from_file(self, current_file):
         annotation = current_file['annotation']
         for segment in self.iter_segments(annotation):
@@ -503,9 +467,6 @@ class RandomSegments(object):
         super(RandomSegments, self).__init__()
         self.duration = duration
         self.weighted = weighted
-
-    def signature(self):
-        return {'type': 'segment', 'duration': self.duration}
 
     def pick(self, segment):
         """Pick a subsegment at random"""
@@ -585,14 +546,6 @@ class RandomSegmentsPerLabel(object):
         self.duration = duration
         self.yield_label = yield_label
 
-    def signature(self):
-        if self.yield_label:
-            return (
-                {'type': 'segment', 'duration': self.duration},
-                {'type': 'label'}
-            )
-        return {'type': 'segment', 'duration': self.duration}
-
     def from_file(self, current_file):
         annotation = current_file['annotation']
         for segment in self.iter_segments(annotation):
@@ -635,15 +588,6 @@ class RandomTracks(object):
     def __init__(self, yield_label=False):
         super(RandomTracks, self).__init__()
         self.yield_label = yield_label
-
-    def signature(self):
-        signature = [
-            {'type': 'segment', 'duration': 0.0},
-            {'type': 'track'}
-        ]
-        if self.yield_label:
-            signature.append({'type': 'label'})
-        return signature
 
     def from_file(self, current_file):
         annotation = current_file['annotation']
@@ -689,9 +633,6 @@ class RandomTrackTriplets(object):
         super(RandomTrackTriplets, self).__init__()
         self.per_label = per_label
         self.yield_label = yield_label
-
-    def signature(self):
-        return [RandomTracks(yield_label=self.yield_label).signature()] * 3
 
     def from_file(self, current_file):
         annotation = current_file['annotation']
@@ -746,13 +687,6 @@ class RandomSegmentTriplets(object):
         self.duration = duration
         self.per_label = per_label
         self.yield_label = yield_label
-
-    def signature(self):
-        if self.yield_label:
-            return 3 * [{'type': 'segment', 'duration': self.duration},
-                        {'type': 'label'}]
-        else:
-            return 3 * [{'type': 'segment', 'duration': self.duration}]
 
     def pick(self, segment):
         """Pick a subsegment at random"""
@@ -827,13 +761,6 @@ class RandomSegmentPairs(object):
         self.duration = duration
         self.per_label = per_label
         self.yield_label = yield_label
-
-    def signature(self):
-        t = RandomSegmentTriplets(duration=self.duration,
-                                  per_label=self.per_label,
-                                  yield_label=self.yield_label)
-        signature = t.signature()
-        return [(signature[0], signature[0]), {'type': 'scalar'}]
 
     def from_file(self, current_file):
         annotation = current_file['annotation']
