@@ -201,9 +201,8 @@ class SlidingSegments(object):
 
                     # if it is not but variable length segments are allowed
                     elif self.variable_length_:
-                        candidate = s & segment
-                        if candidate.duration >= self.min_duration:
-                            yield candidate
+                        yield Segment(start=segment.end - self.duration,
+                                      end=segment.end)
                         break
 
 
