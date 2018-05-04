@@ -87,11 +87,8 @@ def batchify(generator, signature, batch_size=32,
         def __next__(self):
             return next(generator)
 
-        def signature(self):
-            return signature
-
     batches = BaseBatchGenerator(
-        Generator(), batch_size=batch_size, incomplete=incomplete)
+        Generator(), signature, batch_size=batch_size, incomplete=incomplete)
 
     if prefetch:
         batches = BackgroundGenerator(batches, max_prefetch=prefetch)
@@ -114,217 +111,88 @@ class BaseBatchGenerator(object):
         smaller than requested batch size). Default behavior is to not
         yield incomplete final batch.
     """
-    def __init__(self, generator, batch_size=32, incomplete=False):
+    def __init__(self, generator, signature, batch_size=32, incomplete=False):
         super(BaseBatchGenerator, self).__init__()
+
         self.generator = generator
+        self.signature = signature
+
         self.batch_size = batch_size
         self.incomplete = incomplete
+
         self.batch_generator_ = self.iter_batches()
 
-        signature_in = self.generator.signature()
-        signature_out = self.signature()
-        self._check_signature(signature_in, signature_out)
+    def init(self, signature=None):
+        """Initialize new batch"""
 
-    def _passthrough(self, x, **kwargs):
-        return x
-
-    # signature
-
-    def _check_signature(self, sign_in, sign_out):
-
-        if type(sign_in) == dict:
-
-            if 'type' in sign_in:
-                return True
-
-            if sign_in.keys() != sign_out.keys():
-                msg = 'Key mismatch (input: {keys_in}, output: {keys_out}).'
-                raise InputOutputSignatureMismatch(
-                    msg.format(keys_in=sign_in.keys(), keys_out=sign_out.keys()))
-
-            for key in sign_out:
-                self._check_signature(sign_in[key], sign_out[key])
-
-        elif type(sign_in) != type(sign_out):
-
-            msg = 'Type mismatch (input: {type_in}, output: {type_out}).'
-            raise InputOutputSignatureMismatch(
-                msg.format(type_in=type(sign_in),
-                           type_out=type(sign_out)))
-
-        elif len(sign_in) != len(sign_out):
-
-            msg = 'Length mismatch (input: {length_in}, output: {length_out}).'
-            raise InputOutputSignatureMismatch(
-                msg.format(length_in=len(sign_in), length_out=len(sign_out)))
-
-        else:
-
-            for si, so in zip(sign_in, sign_out):
-                self._check_signature(si, so)
-
-
-    def _batch_signature(self, signature_in):
-
-        if isinstance(signature_in, list):
-            return list(self._batch_signature(_signature)
-                        for _signature in signature_in)
-
-        elif isinstance(signature_in, tuple):
-            return tuple(self._batch_signature(_signature)
-                          for _signature in signature_in)
-
-        elif isinstance(signature_in, dict):
-
-            fragment_type = signature_in.get('type', None)
-
-            if fragment_type is None:
-                return {key: self._batch_signature(signature_in[key])
-                        for key in signature_in}
-
-            return {'type': 'batch'}
-
-    def signature(self):
-        signature_in = self.generator.signature()
-        return self._batch_signature(signature_in)
-
-    def _batch_new(self, signature_out):
-
-        if type(signature_out) == list:
-                return [self._batch_new(_signature_out)
-                        for _signature_out in signature_out]
-
-        elif type(signature_out) == tuple:
-                return tuple([self._batch_new(_signature_out)
-                             for _signature_out in signature_out])
-
-        elif type(signature_out) == dict:
-            fragment_type = signature_out.get('type', None)
-            if fragment_type is None:
-                return {key: self._batch_new(_signature_out)
-                        for key, _signature_out in signature_out.items()}
-            else:
-                return []
-
-    def _batch_add(self, fragment, signature_in, signature_out, batch=None, **kwargs):
-
-        if batch is None:
-            batch = self.batch_
-
-        if signature_in is None:
-
-            if type(signature_out) in (list, tuple):
-                for f, s, b, in zip(fragment, signature_out, batch):
-                    self._batch_add(f, None, s, batch=b, **kwargs)
-
-            elif type(signature_out) == dict:
-                fragment_type = signature_out.get('type', None)
-                if fragment_type is None:
-                    for key in signature_out:
-                        f = fragment[key]
-                        so = signature_out[key]
-                        b = batch[key]
-                        self._batch_add(f, None, so, batch=b, **kwargs)
-
-                else:
-                    batch.append(fragment)
-
-        else:
-            if type(signature_in) in (list, tuple):
-                for f, si, so, b, in zip(fragment, signature_in, signature_out, batch):
-                    self._batch_add(f, si, so, batch=b, **kwargs)
-
-            elif type(signature_in) == dict:
-                fragment_type = signature_in.get('type', None)
-                if fragment_type is None:
-                    for key in signature_out:
-                        f = fragment[key]
-                        si = signature_in[key]
-                        so = signature_out[key]
-                        b = batch[key]
-                        self._batch_add(f, si, so, batch=b, **kwargs)
-
-                else:
-                    process_func = getattr(self, 'process_' + fragment_type,
-                                           self._passthrough)
-                    processed = process_func(fragment, signature=signature_in,
-                                             **kwargs)
-                    self._batch_add(processed, None, signature_out,
-                                    batch=batch, **kwargs)
-
-    def pack_ndarray(self, ndarrays):
-        return np.stack(ndarrays)
-
-    def pack_batch(self, batches):
-        try:
-            return np.stack(batches)
-        except ValueError as e:
-            return np.vstack(batches)
-
-    def pack_scalar(self, scalars):
-        return np.array(scalars)
-
-    def _batch_pack(self, signature_out, batch=None):
-
-        if batch is None:
-            batch = self.batch_
-
-        if type(signature_out) == list:
-            return list(self._batch_pack(_signature_out, batch=_batch)
-                        for _signature_out, _batch in zip(signature_out, batch))
-
-        elif type(signature_out) == tuple:
-            return tuple(self._batch_pack(_signature_out, batch=_batch)
-                          for _signature_out, _batch in zip(signature_out, batch))
-
-        elif type(signature_out) == dict:
-            fragment_type = signature_out.get('type', None)
-
-            if fragment_type is None:
-                return {key: self._batch_pack(signature_out[key],
-                                              batch=batch[key])
-                        for key in signature_out}
-            else:
-                pack_func = getattr(self, 'pack_' + fragment_type,
-                                    self._passthrough)
-                return pack_func(batch)
-
-    def _postprocess(self, batch, signature):
-        """Recursively post-process batch after it has been packed
-
-        Parameters
-        ----------
-        batch :
-        signature :
-
-        Returns
-        -------
-        postprocessed_batch :
-
-        """
+        if signature is None:
+            signature = self.signature
 
         if type(signature) == list:
-            return [self._postprocess(_batch, _signature)
-                    for _batch, _signature in zip(batch, signature)]
+            return [self.init(s) for s in signature]
 
-        elif type(signature) == tuple:
-            return tuple([self._postprocess(_batch, _signature)
-                         for _batch, _signature in zip(batch, signature)])
+        if type(signature) == tuple:
+            return tuple([self.init(s) for s in signature])
 
-        elif type(signature) == dict:
-            batch_type = signature.get('type', None)
-            if batch_type is None:
-                return {key: self._postprocess(batch[key], signature[key])
-                        for key in signature}
+        if '@' not in signature:
+            return {key: self.init(s)
+                    for key, s in signature.items()}
 
-            else:
-                postprocess_func = getattr(self, 'postprocess_' + batch_type,
-                                           self._passthrough)
-                return postprocess_func(batch)
+        return []
+
+    def push(self, item, signature=None, batch=None, **kwargs):
+        """Process item and push it to current batch"""
+
+        if signature is None:
+            signature = self.signature
+
+        if batch is None:
+            batch = self.batch_
+
+        if type(signature) in (list, tuple):
+            for i, s, b, in zip(item, signature, batch):
+                self.push(i, s, batch=b, **kwargs)
+                return
+
+        if '@' not in signature:
+            for key in signature:
+                self.push(item[key], signature[key],
+                          batch=batch[key], **kwargs)
+            return
+
+        process_func = signature['@'][0]
+        processed = item if process_func is None \
+                    else process_func(item, **kwargs)
+        batch.append(processed)
+
+    def pack(self, signature=None, batch=None):
+        """Pack current batch"""
+
+        if signature is None:
+            signature = self.signature
+
+        if batch is None:
+            batch = self.batch_
+
+        if type(signature) == list:
+            return list(self.pack(s, batch=b)
+                        for s, b in zip(signature, batch))
+
+        if type(signature) == tuple:
+            return tuple(self.pack(s, batch=b)
+                          for s, b in zip(signature, batch))
+
+        if '@' in signature:
+            pack_func = signature['@'][1]
+            packed = batch if pack_func is None else pack_func(batch)
+            return packed
+
+        return {key: self.pack(signature[key], batch=batch[key])
+                for key in signature}
 
     def postprocess(self, batch):
-        """Post-process batch after it has been packed"""
-        return self._postprocess(batch, self.signature())
+        """Post-process current batch"""
+        return batch
 
     def __iter__(self):
         return self
@@ -339,35 +207,32 @@ class BaseBatchGenerator(object):
 
         endOfBatch = EndOfBatch()
 
-        signature_in = self.generator.signature()
-        signature_out = self.signature()
-
+        # create new empty batch
+        self.batch_ = self.init(self.signature)
         batch_size = 0
         complete = False
-
-        self.batch_ = self._batch_new(signature_out)
 
         for fragment in self.generator:
 
             if fragment is endOfBatch:
                 complete = True
             else:
-                self._batch_add(fragment, signature_in, signature_out)
+                self.push(fragment, self.signature)
                 batch_size += 1
 
             complete |= self.batch_size > 0 and batch_size == self.batch_size
 
             if complete:
                 if batch_size:
-                    batch = self._batch_pack(signature_out)
+                    batch = self.pack(self.signature)
                     yield self.postprocess(batch)
-                self.batch_ = self._batch_new(signature_out)
+                self.batch_ = self.init(self.signature)
                 batch_size = 0
                 complete = False
 
         # yield last incomplete batch
         if batch_size > 0 and self.incomplete:
-            batch = self._batch_pack(signature_out)
+            batch = self.pack(self.signature)
             yield self.postprocess(batch)
 
 
@@ -447,11 +312,9 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         pyannote.database
         """
 
-        signature_in = self.generator.signature()
-        signature_out = self.signature()
-
+        # create new empty batch
+        self.batch_ = self.init(self.signature)
         batch_size = 0
-        self.batch_ = self._batch_new(signature_out)
 
         if infinite:
             file_generator = forever(file_generator, shuffle=True)
@@ -471,25 +334,26 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
 
             for fragment in self.generator.from_file(preprocessed_file):
 
-                self._batch_add(fragment, signature_in, signature_out,
+                # add item to batch
+                self.push(fragment, self.signature,
                                 current_file=preprocessed_file)
                 batch_size += 1
 
                 # fixed batch size
                 if self.batch_size > 0 and batch_size == self.batch_size:
-                    batch = self._batch_pack(signature_out)
+                    batch = self.pack(self.signature)
                     yield self.postprocess(batch)
-                    self.batch_ = self._batch_new(signature_out)
+                    self.batch_ = self.init(self.signature)
                     batch_size = 0
 
             # mono-batch
             if self.batch_size < 1:
-                batch = self._batch_pack(signature_out)
+                batch = self.pack(self.signature)
                 yield self.postprocess(batch)
-                self.batch_ = self._batch_new(signature_out)
+                self.batch_ = self.init(self.signature)
                 batch_size = 0
 
         # yield incomplete final batch
         if batch_size > 0 and batch_size < self.batch_size and incomplete:
-            batch = self._batch_pack(signature_out)
+            batch = self.pack(self.signature)
             yield self.postprocess(batch)
