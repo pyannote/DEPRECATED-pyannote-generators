@@ -1,7 +1,9 @@
-### Version 0.18 (2018-05-04)
+### Version 0.18.1 (2018-05-04)
 
   - BREAKING: simplify batch generators
   - BREAKING: remove (now useless) signature methods
+  - improve: shift start time of final incomplete segment
+  - feat: add support for specific source in SlidingSegments
 
 ### Version 0.17.1 (2018-02-08)
 

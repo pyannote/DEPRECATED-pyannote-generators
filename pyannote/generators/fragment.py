@@ -124,7 +124,10 @@ class SlidingSegments(object):
 
     def from_file(self, current_file):
 
-        if self.source == 'annotated':
+        if isinstance(self.source, (Segment, Timeline)):
+            source = self.source
+
+        elif self.source == 'annotated':
             source = get_annotated(current_file)
 
         elif self.source == 'annotated_extent':
@@ -139,15 +142,6 @@ class SlidingSegments(object):
         elif self.source == 'audio':
             from pyannote.audio.features.utils import get_audio_duration
             source = get_audio_duration(current_file)
-
-        # not documented: use a segment instance directly
-        elif isinstance(self.source, Segment):
-            source = self.source
-
-        else:
-            msg = ('source must be one of "annotated", "annotated_extent", '
-                   '"annotation", "support", or "audio".')
-            raise ValueError(msg)
 
         for segment in self.iter_segments(source):
             yield segment
@@ -207,9 +201,8 @@ class SlidingSegments(object):
 
                     # if it is not but variable length segments are allowed
                     elif self.variable_length_:
-                        candidate = s & segment
-                        if candidate.duration >= self.min_duration:
-                            yield candidate
+                        yield Segment(start=segment.end - self.duration,
+                                      end=segment.end)
                         break
 
 
