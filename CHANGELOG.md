@@ -1,6 +1,7 @@
-### Version 0.17.2 (2018-05-02)
+### Version 0.18 (2018-05-04)
 
-  - fix: make batch packing use input signature
+  - BREAKING: simplify batch generators
+  - BREAKING: remove (now useless) signature methods
 
 ### Version 0.17.1 (2018-02-08)
 
