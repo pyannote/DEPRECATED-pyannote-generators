@@ -1,3 +1,7 @@
+### Version 0.18.2 (2018-05-17)
+
+  - fix: fix support for np.random.seed()
+
 ### Version 0.18.1 (2018-05-04)
 
   - BREAKING: simplify batch generators
