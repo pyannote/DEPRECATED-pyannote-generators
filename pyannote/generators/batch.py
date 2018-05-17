@@ -29,7 +29,6 @@
 
 import warnings
 import numpy as np
-import random
 from pyannote.database.util import get_unique_identifier
 from .background import BackgroundGenerator
 
@@ -248,7 +247,7 @@ def forever(iterable, shuffle=False):
     saved = list(iterable)
     while saved:
         if shuffle:
-            random.shuffle(saved)
+            np.random.shuffle(saved)
         for element in saved:
               yield element
 

@@ -27,7 +27,6 @@
 # Hervé BREDIN - http://herve.niderb.fr
 
 
-import random
 import warnings
 import numpy as np
 
@@ -67,7 +66,8 @@ def random_subsegment(segment, duration, min_duration=None):
     if min_duration is None:
         while True:
             # draw start time from [segment.start, segment.end - duration]
-            t = segment.start + random.random() * (segment.duration - duration)
+            t = segment.start + \
+                np.random.random() * (segment.duration - duration)
             yield Segment(t, t + duration)
 
     else:
@@ -76,10 +76,11 @@ def random_subsegment(segment, duration, min_duration=None):
 
         while True:
             # draw duration from [min_duration, max_duration] interval
-            rnd_duration = min_duration + random.random() * (max_duration - min_duration)
+            rnd_duration = min_duration + \
+                           np.random.random() * (max_duration - min_duration)
 
             # draw start from [segment.start, segment.end - rnd_duration] interval
-            t = segment.start + random.random() * (segment.duration - rnd_duration)
+            t = segment.start + np.random.random() * (segment.duration - rnd_duration)
             yield Segment(t, t + rnd_duration)
 
 
@@ -463,7 +464,7 @@ class RandomSegments(object):
 
     def pick(self, segment):
         """Pick a subsegment at random"""
-        t = segment.start + random.random() * (segment.duration - self.duration)
+        t = segment.start + np.random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
     def from_file(self, current_file):
@@ -598,9 +599,9 @@ class RandomTracks(object):
         segments = from_annotation.get_timeline()
         n_segments = len(segments)
         while True:
-            index = random.randrange(n_segments)
+            index = np.random.randint(n_segments)
             segment = segments[index]
-            track = random.choice(list(from_annotation.get_tracks(segment)))
+            track = np.random.choice(list(from_annotation.get_tracks(segment)))
             if self.yield_label:
                 label = from_annotation[segment, track]
                 yield segment, track, label
@@ -683,7 +684,8 @@ class RandomSegmentTriplets(object):
 
     def pick(self, segment):
         """Pick a subsegment at random"""
-        t = segment.start + random.random() * (segment.duration - self.duration)
+        t = segment.start + \
+            np.random.random() * (segment.duration - self.duration)
         return Segment(t, t + self.duration)
 
     def from_file(self, current_file):
