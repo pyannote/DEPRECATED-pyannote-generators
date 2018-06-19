@@ -1,3 +1,8 @@
+### Version 1.0 (2018-06-19)
+
+  - setup: switch to pyannote.core >= 1.3.2
+  - setup: switch to pyannote.database >= 1.3.2
+
 ### Version 0.18.2 (2018-05-17)
 
   - fix: fix support for np.random.seed()
