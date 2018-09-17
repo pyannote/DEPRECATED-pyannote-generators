@@ -62,8 +62,23 @@ def random_subsegment(segment, duration, min_duration=None):
     min_duration : float, optional
         When provided, choose segment duration at random between `min_duration`
         and `duration` (instead of fixed `duration`).
+
+    Usage
+    -----
+    >>> for subsegment in random_subsegment(segment, duration):
+    >>> ... # do something with subsegment
+    >>> ... pass
+
+    >>> generator = random_subsegment(segment, duration)
+    >>> subsegment = next(generator)
     """
     if min_duration is None:
+
+        if duration > segment.duration:
+            msg = (f'`duration` (= {duration:g}) should be smaller '
+                   f'than `segment` duration (= {segment.duration:g}).')
+            raise ValueError(msg)
+
         while True:
             # draw start time from [segment.start, segment.end - duration]
             t = segment.start + \
