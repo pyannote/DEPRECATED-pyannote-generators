@@ -1,3 +1,9 @@
+### Version 2.0 (2018-11-14)
+
+  - BREAKING: rename __call__ to from_files in FileBasedBatchGenerator
+  - setup: switch to pyannote.core >= 1.4.1
+  - setup: switch to pyannote.database >= 1.5.4
+
 ### Version 1.0 (2018-06-19)
 
   - setup: switch to pyannote.core >= 1.3.2
