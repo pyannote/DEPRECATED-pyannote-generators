@@ -37,8 +37,8 @@ setup(
     namespace_packages=['pyannote'],
     packages=find_packages(),
     install_requires=[
-        'pyannote.core >= 1.3.2',
-        'pyannote.database >= 1.3.2'
+        'pyannote.core >= 1.4.1',
+        'pyannote.database >= 1.5.4'
     ],
     # versioneer
     version=versioneer.get_version(),
@@ -46,7 +46,7 @@ setup(
 
     # PyPI
     name='pyannote.generators',
-    description=('Generators'),
+    description=('itertools for pyannote'),
     author='Hervé Bredin',
     author_email='bredin@limsi.fr',
     url='http://herve.niderb.fr/',
@@ -56,9 +56,8 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering"
     ],
 )
