@@ -268,11 +268,11 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         return current_file
 
     def from_file(self, current_file, incomplete=True):
-        """
+        """Generate batches by looping over one file
 
         Parameters
         ----------
-        current_file :
+        current_file : `dict`
         incomplete : boolean, optional
             Set to False to not yield final batch if its incomplete (i.e.
             smaller than requested batch size). Default behavior is to yield
@@ -280,13 +280,13 @@ class FileBasedBatchGenerator(BaseBatchGenerator):
         """
         def current_file_generator():
             yield current_file
-        for batch in self.__call__(current_file_generator(),
-                                   infinite=False,
-                                   incomplete=incomplete):
+        for batch in self.from_files(current_file_generator(),
+                                     infinite=False,
+                                     incomplete=incomplete):
             yield batch
 
-    def __call__(self, file_generator, infinite=False,
-                 robust=False, incomplete=False):
+    def from_files(self, file_generator, infinite=False,
+                   robust=False, incomplete=False):
         """Generate batches by looping over a (possibly infinite) set of files
 
         Parameters
